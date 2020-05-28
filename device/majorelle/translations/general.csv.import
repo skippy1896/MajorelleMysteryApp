@@ -1,0 +1,16 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+
+[deps]
+
+files=[ "res://majorelle/translations/general.en.translation", "res://majorelle/translations/general.fr.translation", "res://majorelle/translations/general.es.translation" ]
+
+source_file="res://majorelle/translations/general.csv"
+dest_files=[ "res://majorelle/translations/general.en.translation", "res://majorelle/translations/general.fr.translation", "res://majorelle/translations/general.es.translation" ]
+
+[params]
+
+compress=true
+delimiter=0
