@@ -2,7 +2,7 @@
 
 [ext_resource path="res://majorelle/rooms/dining/DiningRoom.gd" type="Script" id=1]
 [ext_resource path="res://majorelle/rooms/dining/background.gd" type="Script" id=2]
-[ext_resource path="res://majorelle/rooms/dining/scenes/top/dining-top.JPG" type="Texture" id=3]
+[ext_resource path="res://majorelle/rooms/dining/scenes/left/dining-left.JPG" type="Texture" id=3]
 [ext_resource path="res://globals/game.tscn" type="PackedScene" id=4]
 
 [node name="scene" type="Node2D"]
@@ -12,6 +12,8 @@ __meta__ = {
 }
 
 [node name="background" type="Sprite" parent="."]
+position = Vector2( 948.636, 537.394 )
+scale = Vector2( 1.16615, 1.32302 )
 texture = ExtResource( 3 )
 script = ExtResource( 2 )
 

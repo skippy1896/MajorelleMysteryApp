@@ -2,18 +2,9 @@ extends Control
 
 export(String, FILE) var bg_sound
 
-var continue_button
 var confirm_popup = null
 var labels = []
 
-func load_autosave():
-	vm.load_autosave()
-
-func can_continue():
-	if not main.get_current_scene():
-		return false
-
-	return (main.get_current_scene() is esc_type.SCENE) || vm.save_data.autosave_available()
 
 func button_clicked():
 	# play a clicking sound here?
@@ -32,14 +23,6 @@ func start_new_game(p_confirm):
 		return
 	vm.load_file(ProjectSettings.get_setting("escoria/platform/game_start_script"))
 	vm.run_game()
-
-func continue_pressed():
-	button_clicked()
-	if main.get_current_scene() is esc_type.SCENE:
-		main.menu_collapse()
-	else:
-		if vm.continue_enabled:
-			load_autosave()
 
 func save_pressed():
 	button_clicked()
@@ -91,15 +74,6 @@ func _find_labels(p = null):
 	for i in range(0, p.get_child_count()):
 		_find_labels(p.get_child(i))
 
-func set_continue_button():
-	if not continue_button:
-		return
-
-	if vm.continue_enabled and can_continue():
-		continue_button.set_disabled(false)
-	else:
-		continue_button.set_disabled(true)
-
 func set_bg_sound():
 	var stream = $"stream"
 
@@ -129,8 +103,6 @@ func _find_menu_buttons(node=self):
 
 			c.connect("pressed", self, sighandler_name)
 
-			if c.name == "continue":
-				continue_button = c
 		else:
 			_find_menu_buttons(c)
 
