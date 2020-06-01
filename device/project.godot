@@ -15,7 +15,7 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Escoria Prototype"
+config/name="Escape Villa - The Majorelle Mystery"
 run/main_scene="res://globals/scene_main.tscn"
 
 [autoload]
@@ -160,3 +160,7 @@ game_highlight={
 [locale]
 
 translations=PoolStringArray( "res://majorelle/translations/general.en.translation", "res://majorelle/translations/general.es.translation", "res://majorelle/translations/general.fr.translation" )
+
+[rendering]
+
+quality/driver/driver_name="GLES2"

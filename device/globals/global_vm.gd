@@ -516,7 +516,7 @@ func report_errors(p_path, errors):
 	# The only way to - optionally - make errors matter
 	if ProjectSettings.get_setting("escoria/debug/terminate_on_errors"):
 		print_stack()
-		assert(false)
+		#assert(false)
 
 func add_level(p_event, p_root):
 	stack.push_back(instance_level(p_event, p_root))

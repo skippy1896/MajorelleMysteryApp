@@ -20,27 +20,21 @@
 [ext_resource path="res://majorelle/ui/rmb_hints.gd" type="Script" id=18]
 
 [sub_resource type="NavigationPolygon" id=1]
-
 vertices = PoolVector2Array( 766.377, 567.042, 1204.89, 557.953, 1491.17, 617.027, 1491.17, 657.925, 1112.47, 689.271, 705.031, 687.462, 158.201, 587.028, 414.945, 555.219, 350.588, 673.829, 159.734, 646.564 )
 polygons = [ PoolIntArray( 0, 1, 2, 3, 4, 5 ), PoolIntArray( 6, 7, 0, 5, 8, 9 ) ]
 outlines = [ PoolVector2Array( 414.945, 555.219, 766.377, 567.042, 1204.89, 557.953, 1491.17, 617.027, 1491.17, 657.925, 1112.47, 689.271, 705.031, 687.462, 350.588, 673.829, 159.734, 646.564, 158.201, 587.028 ) ]
 
 [sub_resource type="Gradient" id=2]
 
-
 [sub_resource type="GradientTexture" id=3]
-
 gradient = SubResource( 2 )
 width = 1
 
 [sub_resource type="RectangleShape2D" id=4]
 
-
 [sub_resource type="ShaderMaterial" id=5]
 
-
 [sub_resource type="Animation" id=6]
-
 tracks/0/type = "value"
 tracks/0/path = NodePath(".:rotation")
 tracks/0/interp = 1
@@ -67,7 +61,6 @@ tracks/1/keys = {
 }
 
 [sub_resource type="Animation" id=7]
-
 tracks/0/type = "value"
 tracks/0/path = NodePath(".:position")
 tracks/0/interp = 1
@@ -94,7 +87,6 @@ tracks/1/keys = {
 }
 
 [sub_resource type="Animation" id=8]
-
 tracks/0/type = "value"
 tracks/0/path = NodePath(".:rotation")
 tracks/0/interp = 1
@@ -121,7 +113,6 @@ tracks/1/keys = {
 }
 
 [sub_resource type="Animation" id=9]
-
 tracks/0/type = "value"
 tracks/0/path = NodePath(".:rotation")
 tracks/0/interp = 1
@@ -203,7 +194,6 @@ scale = Vector2( 2.48476, 2.48476 )
 shape = SubResource( 4 )
 
 [node name="trigger1" type="Area2D" parent="."]
-editor/display_folded = true
 script = ExtResource( 9 )
 global_id = "trigger1"
 events_path = "res://majorelle/rooms/room1/trigger1.esc"
@@ -296,4 +286,3 @@ position = Vector2( 73.3036, 34.9703 )
 
 [node name="signal_script" type="Node" parent="game"]
 script = ExtResource( 18 )
-

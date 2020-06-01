@@ -5,3 +5,4 @@ var handIcon = load("res://globals/actor/Emoji_u1f590_1f3fb.png")
 
 func _ready():
 	Input.set_custom_mouse_cursor(handIcon)
+	get_node("narrator").activate("talk", null)

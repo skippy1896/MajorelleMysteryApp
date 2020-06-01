@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=2]
 
-[ext_resource path="res://rooms/floor-first/background/Entree_Final.png" type="Texture" id=1]
-[ext_resource path="res://rooms/floor-first/items/M0513_999-132-1-a_JYL.png" type="Texture" id=2]
+[ext_resource path="res://majorelle/rooms/floor-first/background/Entree_Final.png" type="Texture" id=1]
+[ext_resource path="res://majorelle/rooms/floor-first/items/M0513_999-132-1-a_JYL.png" type="Texture" id=2]
 
 [node name="DiningRoom" type="Node2D"]
 
