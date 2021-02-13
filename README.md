@@ -13,15 +13,15 @@ Presentation CDV Award Ceremony in Saarbrücken: [Slides](AwardCeremony.pdf)
 ### The Villains Version 1.0 Development team
 
 **Project Management** - Sonja "soheinze" Heinze  
-**Game design** - Sonja "soheinze" Heinze, UHH Steinfeltz  
-**Art design** - UHH Steinfeltz  
-**Character design** - UHH Steinfeltz  
-**2D UI design** - UHH Steinfeltz  
-**Room design**- UHH Steinfeltz  
+**Game design** - Sonja "soheinze" Heinze, Marie-Laure Steinfeltz  
+**Art design** - Marie-Laure Steinfeltz  
+**Character design** - Marie-Laure Steinfeltz  
+**2D UI design** - Marie-Laure Steinfeltz  
+**Room design**- Marie-Laure Steinfeltz  
 **Programming** - Sonja "soheinze" Heinze  
-**Music & Sound** - Sonja "soheinze" Heinze, UHH Steinfeltz  
-**Text (English)** - Sonja "soheinze" Heinze, UHH Steinfeltz  
-**Translations (German and French)** - UHH Steinfeltz  
+**Music & Sound** - Sonja "soheinze" Heinze, Marie-Laure Steinfeltz  
+**Text (English)** - Sonja "soheinze" Heinze, Marie-Laure Steinfeltz  
+**Translations (German and French)** - Marie-Laure Steinfeltz  
 **Project review** - Sophie Toulouze  
 
 
@@ -38,7 +38,7 @@ The game is based on the point & click adventure game framework for Godot Engine
 **Our original team members** - Lea-Kathrin Gleissner, Paul Hermann, Melisa Kujevic, Jörg Reichert, Berenike Reisinghoff, Sophie Toulouze
 and the “helping hands” Torsten Röder, Anastasia Bauch, Daniel Haas, Annika Rockenberger
 
-**Our testers** - Anne und Thomas Steinfeltz, Christian Hartmann, Sarah Grau, Stephen Bett, Autumn Abbas, VioVodka, ...
+**Our testers** - Sophie Toulouze, Anne und Thomas Steinfeltz, Christian Hartmann, Sarah Grau, Stephen Bett, Autumn Abbas, VioVodka, ...
 
 **… and of course the Coding da Vinci team and the Villa Majorelle for making this possible!**
 
