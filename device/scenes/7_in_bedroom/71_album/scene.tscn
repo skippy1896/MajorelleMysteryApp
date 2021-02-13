@@ -1,0 +1,127 @@
+[gd_scene load_steps=14 format=2]
+
+[ext_resource path="res://scenes/7_in_bedroom/71_album/exit.tscn" type="PackedScene" id=1]
+[ext_resource path="res://templates/kiara_version2.tscn" type="PackedScene" id=2]
+[ext_resource path="res://scenes/7_in_bedroom/sprites/bedr_blur.png" type="Texture" id=3]
+[ext_resource path="res://globals/game.scn" type="PackedScene" id=4]
+[ext_resource path="res://globals/sprites/knoepfe und co/general-button-wide.png" type="Texture" id=5]
+[ext_resource path="res://ui/font.tres" type="Theme" id=6]
+[ext_resource path="res://scenes/7_in_bedroom/71_album/scene.gd" type="Script" id=7]
+[ext_resource path="res://globals/item.gd" type="Script" id=8]
+[ext_resource path="res://scenes/7_in_bedroom/sprites/book_front_pl.png" type="Texture" id=9]
+[ext_resource path="res://scenes/7_in_bedroom/71_album/confirm.tscn" type="PackedScene" id=10]
+[ext_resource path="res://scenes/7_in_bedroom/71_album/open_album.tscn" type="PackedScene" id=11]
+[ext_resource path="res://globals/sprites/character zeug/Geister/jeanne_ohno.png" type="Texture" id=13]
+[ext_resource path="res://scenes/7_in_bedroom/71_album/book_with_lock.tscn" type="PackedScene" id=14]
+
+[node name="scene" type="Node2D"]
+script = ExtResource( 7 )
+__meta__ = {
+"_edit_horizontal_guides_": [ 0.923004 ],
+"_edit_vertical_guides_": [ 1544.99 ]
+}
+
+[node name="background" type="TextureRect" parent="."]
+margin_right = 1027.0
+margin_bottom = 800.0
+rect_scale = Vector2( 1.58, 1.58 )
+texture = ExtResource( 3 )
+expand = true
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="jane" type="Node2D" parent="."]
+script = ExtResource( 8 )
+global_id = "bedroom_album_jane"
+
+[node name="Sprite" type="Sprite" parent="jane"]
+position = Vector2( 1274, 876 )
+scale = Vector2( 0.28, 0.28 )
+texture = ExtResource( 13 )
+flip_h = true
+
+[node name="album_front_closeup" type="Node2D" parent="."]
+z_index = 1
+z_as_relative = false
+script = ExtResource( 8 )
+tooltip = "locked photo album"
+events_path = "res://scenes/7_in_bedroom/71_album/album_closeup.esc"
+global_id = "album_front_closeup"
+
+[node name="area" type="TextureButton" parent="album_front_closeup"]
+margin_left = 530.0
+margin_top = 146.0
+margin_right = 1134.0
+margin_bottom = 914.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Sprite" type="Sprite" parent="album_front_closeup"]
+position = Vector2( 796, 544 )
+texture = ExtResource( 9 )
+
+[node name="book_with_lock" parent="." instance=ExtResource( 14 )]
+visible = false
+z_index = 2
+
+[node name="end_game" type="TextureButton" parent="."]
+visible = false
+margin_left = 16.0
+margin_top = 836.0
+margin_right = 528.0
+margin_bottom = 1348.0
+texture_normal = ExtResource( 5 )
+script = ExtResource( 8 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+global_id = "end_game"
+
+[node name="UI_QUIT_GAME" type="Label" parent="end_game"]
+margin_left = 88.0
+margin_top = 250.0
+margin_right = 435.0
+margin_bottom = 306.0
+theme = ExtResource( 6 )
+text = "UI_QUIT_GAME"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="confirm" parent="." instance=ExtResource( 10 )]
+visible = false
+position = Vector2( 1178, 528 )
+scale = Vector2( 0.1, 0.1 )
+z_index = 50
+z_as_relative = false
+script = ExtResource( 8 )
+events_path = "res://scenes/7_in_bedroom/71_album/confirm.esc"
+global_id = "album_confirm"
+
+[node name="exit" parent="." instance=ExtResource( 1 )]
+position = Vector2( 100, 1124 )
+scale = Vector2( 0.4, 0.4 )
+z_index = 60
+z_as_relative = false
+placeholders = {
+
+}
+
+[node name="open_album" parent="." instance=ExtResource( 11 )]
+visible = false
+position = Vector2( 0, 2 )
+z_index = 70
+z_as_relative = false
+tooltip = " "
+global_id = "album_open"
+
+[node name="kiara" parent="." instance=ExtResource( 2 )]
+position = Vector2( 0, 1200 )
+z_index = 3000
+events_path = "res://scenes/7_in_bedroom/71_album/album_kiara.esc"
+use_custom_z = false
+
+[node name="game" parent="." instance=ExtResource( 4 )]
+[connection signal="pressed" from="end_game" to="end_game" method="_on_end_game_pressed"]

@@ -1,0 +1,10 @@
+:use
+
+set_global i/inv_chainsaw true
+set_active chainsaw false
+
+
+:look
+
+say player "A chainsaw"
+

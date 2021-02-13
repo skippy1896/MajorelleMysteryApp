@@ -1,0 +1,326 @@
+[gd_scene load_steps=13 format=2]
+
+[ext_resource path="res://ui/main_menu.gd" type="Script" id=1]
+[ext_resource path="res://ui/font.tres" type="Theme" id=2]
+[ext_resource path="res://globals/sprites/bg-button_grey.png" type="Texture" id=3]
+[ext_resource path="res://ui/villa-entry.tscn" type="PackedScene" id=4]
+[ext_resource path="res://font/kalam-font/Kalam.ttf" type="DynamicFontData" id=5]
+[ext_resource path="res://globals/sprites/igge-button.png" type="Texture" id=6]
+[ext_resource path="res://globals/sprites/speechbubble.png" type="Texture" id=7]
+[ext_resource path="res://globals/sprites/menu_bg.png" type="Texture" id=8]
+[ext_resource path="res://globals/sprites/menu_deko.png" type="Texture" id=9]
+[ext_resource path="res://font/kalam-font/KalamBold.ttf" type="DynamicFontData" id=10]
+
+[sub_resource type="DynamicFont" id=1]
+size = 124
+use_mipmaps = true
+use_filter = true
+extra_spacing_top = 12
+extra_spacing_bottom = 12
+font_data = ExtResource( 10 )
+
+[sub_resource type="DynamicFont" id=2]
+size = 64
+use_filter = true
+font_data = ExtResource( 5 )
+
+[node name="main_menu" type="Control"]
+margin_right = 1600.0
+margin_bottom = 1200.0
+theme = ExtResource( 2 )
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_horizontal_guides_": [ 922.567, 1200.08, 536.757 ],
+"_edit_use_anchors_": false,
+"_edit_vertical_guides_": [ 828.692, 1600.08, 1160.69, 1322.16 ]
+}
+
+[node name="Sprite" type="Sprite" parent="."]
+scale = Vector2( 0.4, 0.4 )
+texture = ExtResource( 8 )
+centered = false
+
+[node name="menu_design" type="TextureRect" parent="."]
+margin_left = -106.0
+margin_top = -78.0
+margin_right = 694.0
+margin_bottom = 993.0
+rect_scale = Vector2( 1.28, 1.28 )
+texture = ExtResource( 9 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="villa-entry" parent="." instance=ExtResource( 4 )]
+visible = false
+position = Vector2( 854.039, 759.706 )
+scale = Vector2( 1.78, 1.78 )
+z_as_relative = false
+placeholders = {
+
+}
+use_custom_z = true
+
+[node name="new_game" type="TextureButton" parent="."]
+margin_left = 800.828
+margin_top = 613.071
+margin_right = 1312.83
+margin_bottom = 1125.07
+rect_scale = Vector2( 0.8, 0.6 )
+texture_normal = ExtResource( 3 )
+texture_pressed = ExtResource( 3 )
+texture_hover = ExtResource( 3 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="UI_NEW_GAME" type="Label" parent="new_game"]
+anchor_top = 0.5
+anchor_bottom = 0.5
+margin_left = 42.5162
+margin_top = -7.78052
+margin_right = 654.516
+margin_bottom = 97.2191
+rect_scale = Vector2( 0.7, 1 )
+hint_tooltip = "Start a new game"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "UI_NEW_GAME"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="text" type="TextureButton" parent="."]
+margin_left = 698.0
+margin_top = -130.0
+margin_right = 4206.0
+margin_bottom = 2350.0
+rect_scale = Vector2( 0.264841, 0.269158 )
+texture_normal = ExtResource( 7 )
+texture_pressed = ExtResource( 7 )
+texture_hover = ExtResource( 7 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="text" type="RichTextLabel" parent="text"]
+margin_left = 873.961
+margin_top = 940.933
+margin_right = 2470.96
+margin_bottom = 1834.93
+theme = ExtResource( 2 )
+custom_fonts/normal_font = SubResource( 1 )
+custom_colors/default_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+text = "
+Wähle eine Sprache 
+
+Choose a language 
+
+Choisissez une langue"
+fit_content_height = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="credits" type="TextureButton" parent="."]
+margin_left = 1310.48
+margin_top = 999.331
+margin_right = 1822.48
+margin_bottom = 1511.33
+rect_scale = Vector2( 0.3, 0.3 )
+texture_normal = ExtResource( 6 )
+texture_pressed = ExtResource( 6 )
+texture_hover = ExtResource( 6 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="UI_CREDITS" type="Label" parent="credits"]
+margin_left = -46.9951
+margin_top = 225.428
+margin_right = 565.005
+margin_bottom = 409.428
+hint_tooltip = "Start a new game"
+mouse_filter = 1
+size_flags_vertical = 1
+theme = ExtResource( 2 )
+custom_fonts/font = SubResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "UI_CREDITS"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="continue" type="TextureButton" parent="."]
+visible = false
+margin_left = 576.0
+margin_top = 742.0
+margin_right = 1108.0
+margin_bottom = 1254.0
+rect_scale = Vector2( 0.8, 0.6 )
+texture_normal = ExtResource( 3 )
+texture_pressed = ExtResource( 3 )
+texture_hover = ExtResource( 3 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="UI_CONTINUE" type="Label" parent="continue"]
+margin_left = 31.9803
+margin_top = 223.268
+margin_right = 643.98
+margin_bottom = 328.268
+rect_scale = Vector2( 0.7, 1 )
+hint_tooltip = "Start a new game"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "UI_CONTINUE"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="exit" type="TextureButton" parent="."]
+margin_left = 800.164
+margin_top = 852.941
+margin_right = 1334.16
+margin_bottom = 1364.94
+rect_scale = Vector2( 0.8, 0.6 )
+texture_normal = ExtResource( 3 )
+texture_pressed = ExtResource( 3 )
+texture_hover = ExtResource( 3 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="UI_QUIT" type="Label" parent="exit"]
+margin_left = 46.0
+margin_top = 244.499
+margin_right = 647.0
+margin_bottom = 333.499
+rect_scale = Vector2( 0.7, 1 )
+hint_tooltip = "Quit the game"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "UI_QUIT"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="en" type="TextureButton" parent="."]
+margin_left = 1065.1
+margin_top = 450.0
+margin_right = 1577.1
+margin_bottom = 966.0
+rect_scale = Vector2( 0.3, 0.3 )
+texture_normal = ExtResource( 6 )
+texture_pressed = ExtResource( 6 )
+texture_hover = ExtResource( 6 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="en" type="Label" parent="en"]
+margin_left = 144.579
+margin_top = 182.123
+margin_right = 216.579
+margin_bottom = 251.123
+rect_scale = Vector2( 3, 3 )
+hint_tooltip = "en"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.184314, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "en"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="fr" type="TextureButton" parent="."]
+margin_left = 1310.1
+margin_top = 450.0
+margin_right = 1827.15
+margin_bottom = 966.0
+rect_scale = Vector2( 0.3, 0.3 )
+texture_normal = ExtResource( 6 )
+texture_pressed = ExtResource( 6 )
+texture_hover = ExtResource( 6 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="fr" type="Label" parent="fr"]
+margin_left = 176.767
+margin_top = 189.184
+margin_right = 233.767
+margin_bottom = 258.184
+rect_scale = Vector2( 3, 3 )
+hint_tooltip = "fr"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "fr"
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="de" type="TextureButton" parent="."]
+anchor_left = 0.193782
+anchor_top = -0.87557
+anchor_right = 0.193782
+anchor_bottom = -0.87557
+margin_left = 510.049
+margin_top = 1500.68
+margin_right = 1022.05
+margin_bottom = 2012.68
+rect_scale = Vector2( 0.3, 0.3 )
+texture_normal = ExtResource( 6 )
+texture_pressed = ExtResource( 6 )
+texture_hover = ExtResource( 6 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="de" type="Label" parent="de"]
+margin_left = 153.095
+margin_top = 189.206
+margin_right = 215.095
+margin_bottom = 258.206
+rect_scale = Vector2( 3, 3 )
+hint_tooltip = "fr"
+mouse_filter = 1
+size_flags_vertical = 0
+theme = ExtResource( 2 )
+custom_colors/font_color = Color( 0.223529, 0.223529, 0.184314, 1 )
+custom_colors/font_color_shadow = Color( 0.443137, 0.266667, 0.00784314, 1 )
+text = "de"
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+[connection signal="pressed" from="en" to="." method="_on_language_selected" binds= [ "en" ]]
+[connection signal="pressed" from="fr" to="." method="_on_language_selected" binds= [ "fr" ]]
+[connection signal="pressed" from="de" to="." method="_on_language_selected" binds= [ "de" ]]

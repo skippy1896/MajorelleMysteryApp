@@ -1,0 +1,23 @@
+:use
+set_active button_tutorial false
+set_global wrong_flower_picked false
+set_global right_flower_picked true
+
+set_active highlight_daisies false
+set_active highlight_original true
+set_active highlight_roses false
+set_active highlight_tulips false
+
+say telon entrance_right_flower:"entrance_right_flower" left_left avatar_luis
+set_active flower_instruction false
+set_active flowers false
+set_active tulips false
+set_active daisies false
+set_active roses false
+set_active original false
+set_active highlight_tulips false
+set_active highlight_daisies false
+set_active highlight_roses false
+set_active highlight_original false
+set_active lightbulb true
+say original entrance_offer_lamp:"entrance_offer_lamp" left_left avatar_luis

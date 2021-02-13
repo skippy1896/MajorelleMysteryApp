@@ -1,9 +1,7 @@
 extends Control
-
+var vm
 var stream
-
 var state = "default"
-
 export var global_id = "bg_music"
 
 func game_cleared():
@@ -33,9 +31,8 @@ func set_state(p_state, p_force = false):
 		stream.volume_db = vm.settings.music_volume
 
 func _ready():
+	vm = get_tree().get_root().get_node("vm")
 	stream = $"stream"
-
 	vm.register_object(global_id, self)
 
 	add_to_group("game")
-

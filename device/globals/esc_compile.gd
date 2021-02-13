@@ -1,65 +1,41 @@
-class EscoriaEvent:
-	var ev_name
-	var ev_level
-	var ev_flags
-
-	func _init(p_name, p_level, p_flags):
-		ev_name = p_name
-		ev_level = p_level
-		ev_flags = p_flags
 
 var commands = {
-	"set_global": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING] },
-	"dec_global": { "min_args": 2, "types": [TYPE_STRING, TYPE_INT] },
-	"inc_global": { "min_args": 2, "types": [TYPE_STRING, TYPE_INT] },
+	"set_global": { "min_args": 2, "types": [TYPE_STRING, TYPE_BOOL] },
 	"set_globals": { "min_args": 2, "types": [TYPE_STRING, TYPE_BOOL] },
-	"accept_input": { "min_args": 1, "types": [TYPE_STRING] },
 	"debug": { "min_args": 1 },
 	"anim": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL] },
-	"play_snd": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING, TYPE_BOOL] },
 	"set_state": { "min_args": 2 },
-	"set_hud_visible": { "min_args": 1, "types": [TYPE_BOOL]},
 	"say": { "min_args": 2 },
 	"?": { "alias": "dialog"},
-	"!": { "alias": "end_dialog", "min_args": 0 },
 	"cut_scene": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL] },
 	">": { "alias": "branch"},
 	"inventory_add": { "min_args": 1 },
 	"inventory_remove": { "min_args": 1 },
 	"inventory_open": { "min_args": 1, "types": [TYPE_BOOL] },
 	"set_active": { "min_args": 2, "types": [TYPE_STRING, TYPE_BOOL] },
-	"set_interactive": { "min_args": 2, "types": [TYPE_STRING, TYPE_BOOL] },
 	"stop": true,
 	"repeat": true,
 	"wait": true,
-	"set_speed": { "min_args": 2, "types": [TYPE_STRING, TYPE_INT] },
-	"teleport": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING, TYPE_INT] },
+	"teleport": { "min_args": 2 },
 	"teleport_pos": { "min_args": 3 },
-	"slide": { "min_args": 2 },
-	"slide_block": { "min_args": 2 },
 	"walk": { "min_args": 2 },
 	"walk_block": { "min_args": 2 },
-	"turn_to": { "min_args": 2 },
-	"set_angle": { "min_args": 2 },
-	"change_scene": { "min_args": 1, "types": [TYPE_STRING, TYPE_BOOL] },
+	"change_scene": { "min_args": 1 },
 	"spawn": { "min_args": 1 },
 	"%": { "alias": "label", "min_args": 1},
 	"jump": { "min_args": 1 },
 	"dialog_config": { "min_args": 3, "types": [TYPE_STRING, TYPE_BOOL, TYPE_BOOL] },
+	"queue_scene": { "min_args": 1 },
 	"sched_event": { "min_args": 3, "types": [TYPE_REAL, TYPE_STRING, TYPE_STRING] },
-	"custom": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING] },
-	"camera_set_drag_margin_enabled": { "min_args": 2, "types": [TYPE_BOOL, TYPE_BOOL] },
+	"custom": { "min_args": 2 },
 	"camera_set_target": { "min_args": 1, "types": [TYPE_REAL] },
 	"camera_set_pos": { "min_args": 3, "types": [TYPE_REAL, TYPE_INT, TYPE_INT] },
-	"camera_set_zoom": { "min_args": 1, "types": [TYPE_REAL] },
-	"camera_set_zoom_height": { "min_args": 1, "types": [TYPE_INT] },
-	"camera_push": { "min_args": 1, "types": [TYPE_STRING] },
-	"camera_shift": { "min_args": 2, "types": [TYPE_INT, TYPE_INT] },
 	"autosave": { "min_args": 0 },
 	"queue_resource": { "min_args": 1, "types": [TYPE_STRING, TYPE_BOOL] },
 	"queue_animation": { "min_args": 2, "types": [TYPE_STRING, TYPE_STRING, TYPE_BOOL] },
 	"game_over": { "min_args": 1, "types": [TYPE_BOOL] },
 }
+
 
 func check_command(cmd, state, errors):
 	if !(cmd.name in commands):
@@ -90,15 +66,11 @@ func check_command(cmd, state, errors):
 				elif cmd.params[i] == "false":
 					cmd.params[i] = false
 				else:
-					errors.push_back("line " + str(state.line_count) + ": Invalid parameter " + cmd.params[i] + " for command " + cmd.name + ". Must be 'true' or 'false'.")
+					errors.push_back("line "+str(state.line_count)+": Invalid parameter "+str(i)+" for command "+cmd.name+". Must be 'true' or 'false'.")
 					ret = false
 			if t == TYPE_INT:
-				if not cmd.params[i].is_valid_integer():
-					errors.push_back("line " + str(state.line_count) + ": Invalid parameter " + cmd.params[i] + " for command " + cmd.name + ". Expected integer.")
 				cmd.params[i] = int(cmd.params[i])
 			if t == TYPE_REAL:
-				if not cmd.params[i].is_valid_float():
-					errors.push_back("line " + str(state.line_count) + ": Invalid parameter " + cmd.params[i] + " for command " + cmd.name + ". Expected float.")
 				cmd.params[i] = float(cmd.params[i])
 			i+=1
 
@@ -158,22 +130,18 @@ func add_level(state, level, errors):
 
 func add_dialog(state, level, errors):
 	read_line(state)
-
 	while typeof(state.line) != typeof(null):
 		if is_event(state.line):
 			return
-
 		var ind_level = get_indent(state.line)
-
 		if ind_level < state.indent:
 			return
-
 		if ind_level > state.indent:
 			errors.push_back("line "+str(state.line_count)+": invalid indentation for dialog")
 			read_line(state)
 			continue
-
-		read_dialog_option(state, level, errors)
+		# warning-ignore:unused_variable
+		var read = read_dialog_option(state, level, errors)
 
 func get_token(line, p_from, line_count, errors):
 	while p_from < line.length():
@@ -217,7 +185,9 @@ func trim(p_str):
 		p_str = p_str.substr(0, p_str.length()-1)
 	return p_str
 
-func parse_flags(p_flags, flags_list, ifs):
+
+
+func parse_flags(p_flags, flags_list, if_true, if_false, if_inv, if_not_inv):
 	var from = 1
 	while true:
 		var next = p_flags.find(",", from)
@@ -228,32 +198,19 @@ func parse_flags(p_flags, flags_list, ifs):
 			flag = p_flags.substr(from, next - from)
 		flag = trim(flag)
 		var list = []
-
 		if flag[0] == "!":
 			list.push_back(true)
-			flag = trim(flag.substr(1, flag.length()-1))
-			if flag.find("inv-") == 0:
-				ifs["if_not_inv"].push_back(trim(flag).substr(4, flag.length()-1))
-			elif flag.find("a/") == 0:
-				ifs["if_not_active"].push_back(trim(flag).substr(2, flag.length() - 1))
-			elif flag.substr(0, 3) in ["eq ", "gt ", "lt "]:
-				var elems = flag.split(" ", true, 2)
-				var comparison = "ne" if elems[0] == "eq" else "le" if elems[0] == "gt" else "ge"
-				ifs["if_" + comparison].push_back([elems[1], elems[2]])
+			flag = flag.substr(1, flag.length()-1)
+			if flag.find("inv-") == -1:
+				if_false.push_back(trim(flag))
 			else:
-				ifs["if_false"].push_back(trim(flag))
+				if_not_inv.push_back(trim(flag).substr(4, flag.length()-1))
 		else:
 			list.push_back(false)
 			if flag.find("inv-") == 0:
-				ifs["if_inv"].push_back(trim(flag).substr(4, flag.length()-1))
-			elif flag.find("a/") == 0:
-				ifs["if_active"].push_back(trim(flag).substr(2, flag.length() - 1))
-			elif flag.substr(0, 3) in ["eq ", "gt ", "lt "]:
-				var elems = flag.split(" ", true, 2)
-				ifs["if_" + elems[0]].push_back([elems[1], elems[2]])
+				if_inv.push_back(trim(flag).substr(4, flag.length()-1))
 			else:
-				ifs["if_true"].push_back(trim(flag))
-
+				if_true.push_back(trim(flag))
 		if flag.find(":") >= 0:
 			var pos = flag.substr(0, flag.find(":"))
 			var inv = flag.substr(0, pos)
@@ -265,9 +222,8 @@ func parse_flags(p_flags, flags_list, ifs):
 			list.push_back("i")
 		else:
 			list.push_back("g")
-
 		list.push_back(trim(flag))
-		# printt("adding flag ", list)
+		#printt("adding flag ", list)
 		flags_list.push_back(list)
 		if next == -1:
 			return
@@ -279,17 +235,9 @@ func read_dialog_option(state, level, errors):
 	if tk != "*" && tk != "-":
 		errors.append("line "+str(state.line_count)+": Ivalid dialog option")
 		read_line(state)
-		return
-
-	# Remove inline comments
-	var comment_idx = state.line.find("#")
-	if comment_idx > -1:
-		state.line = state.line.substr(0, comment_idx)
-
+		return false
 	tk_end += 1
-	# var c_start = state.line.find("\"", 0)
-	var c_end = state.line.find_last("\"")
-	var q_end = state.line.find("[", c_end)
+	var q_end = state.line.find("[", tk_end)
 	var q_flags = null
 	#printt("flags before", q_flags)
 	if q_end == -1:
@@ -305,17 +253,21 @@ func read_dialog_option(state, level, errors):
 	var cmd = { "name": "*", "params": [question, []] }
 
 	if q_flags:
-		var ifs = {
-			"if_true": [], "if_false": [], "if_inv": [], "if_not_inv": [],
-			"if_active": [], "if_not_active": [],
-			"if_eq": [], "if_ne": [], # string and integer comparison
-			"if_gt": [], "if_ge": [], "if_lt": [], "if_le": [] # integer comparison
-		}
+		#printt("parsing flags ", q_flags, state.line)
+		var if_true = []
+		var if_false = []
+		var if_inv = []
+		var if_not_inv = []
 		var flag_list = []
-		parse_flags(q_flags, flag_list, ifs)
-		for key in ifs:
-			if ifs[key].size():
-				cmd[key] = ifs[key]
+		parse_flags(q_flags, flag_list, if_true, if_false, if_inv, if_not_inv)
+		if if_true.size():
+			cmd.if_true = if_true
+		if if_false.size():
+			cmd.if_false = if_false
+		if if_inv.size():
+			cmd.if_inv = if_inv
+		if if_not_inv.size():
+			cmd.if_not_inv = if_inv
 		if flag_list.size():
 			cmd.flags = flag_list
 
@@ -329,18 +281,16 @@ func read_cmd(state, level, errors):
 	var params = []
 	var from = 0
 	var tk_end = get_token(state.line, from, state.line_count, errors)
-	var ifs = {
-		"if_true": [], "if_false": [], "if_inv": [], "if_not_inv": [],
-		"if_active": [], "if_not_active": [],
-		"if_eq": [], "if_ne": [], # string and integer comparison
-		"if_gt": [], "if_ge": [], "if_lt": [], "if_le": [] # integer comparison
-	}
+	var if_true = []
+	var if_false = []
+	var if_inv = []
+	var if_not_inv = []
 	var flags = []
 	while tk_end != -1:
 		var tk = trim(state.line.substr(from, tk_end - from))
 		from = tk_end + 1
 		if is_flags(tk):
-			parse_flags(tk, flags, ifs)
+			parse_flags(tk, flags, if_true, if_false, if_inv, if_not_inv)
 		else:
 			params.push_back(tk)
 		tk_end = get_token(state.line, from, state.line_count, errors)
@@ -371,18 +321,17 @@ func read_cmd(state, level, errors):
 		return
 	else:
 		params.remove(0)
-
-		# Remove inline comments
-		var comment_idx = params.find("#")
-		if comment_idx > -1:
-			params.resize(comment_idx)
-
 		cmd.params = params
 		read_line(state)
 
-	for key in ifs:
-		if ifs[key].size():
-			cmd[key] = ifs[key]
+	if if_true.size():
+		cmd.if_true = if_true
+	if if_false.size():
+		cmd.if_false = if_false
+	if if_inv.size():
+		cmd.if_inv = if_inv
+	if if_not_inv.size():
+		cmd.if_not_inv = if_inv
 	if flags.size():
 		cmd.flags = flags
 
@@ -402,16 +351,7 @@ func read_events(f, ret, errors):
 		if typeof(ev) != typeof(null):
 			var level = []
 			var abort = add_level(state, level, errors)
-			var ev_flags = []
-			if "|" in ev:
-				var ev_split = ev.split("|", true, 1)
-				ev = ev_split[0]
-				ev = ev.strip_edges()
-				if ev_split.size() > 1:
-					ev_split[1] = ev_split[1].strip_edges()
-					ev_flags = ev_split[1].split(" ")
-
-			ret[ev] = EscoriaEvent.new(ev, level, Array(ev_flags))
+			ret[ev] = level
 			if abort:
 				return abort
 
@@ -443,6 +383,7 @@ func compile_str(p_str, errors):
 	#printt("returning ", p_fname, ret)
 	return ret
 
+
 func compile(p_fname, errors):
 	var f = File.new()
 	f.open(p_fname, File.READ)
@@ -454,3 +395,4 @@ func compile(p_fname, errors):
 
 	#printt("returning ", p_fname, ret)
 	return ret
+

@@ -15,78 +15,47 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Escape Villa - The Majorelle Mystery"
+config/name="Majorelle Mystery"
 run/main_scene="res://globals/scene_main.tscn"
+boot_splash/fullsize=false
+boot_splash/bg_color=Color( 0, 0, 0, 1 )
+config/icon="res://icon.png"
+config/macos_native_icon="res://icon.icns"
+config/windows_native_icon="res://icon.ico"
+#main_scene="res://scenes/intro-game/scene.tscn"
+max_voice_volume=2
+save_data="res://globals/save_data.gd"
+speech_suffix=".ogg"
+tooltip_lang_default="en"
 
 [autoload]
 
-main="*res://globals/main.tscn"
-vm="*res://globals/global_vm.gd"
-esc_type="*res://globals/escoria_types.gd"
+main="res://main.scn"
+vm="res://globals/global_vm.scn"
+
+[debug]
+
+print_clicked_control=true
 
 [display]
 
-window/size/width=1920
-window/size/height=1080
-window/size/resizable=false
-window/size/test_width=1920
-window/size/test_height=1080
-window/dpi/allow_hidpi=true
+window/size/width=1600
+window/size/height=1200
+window/size/fullscreen=true
+mouse_cursor/custom_image="res://globals/sprites/knoepfe und co/cursor_small.png"
+mouse_cursor/custom_image_hotspot=Vector2( 16, 9 )
+mouse_cursor/tooltip_position_offset=Vector2( 20, 0 )
 window/stretch/mode="2d"
 window/stretch/aspect="keep"
-window/stretch/shrink="1"
+game_height=1150
+game_width=1920
 
-[escoria]
+[importer_defaults]
 
-application/max_voice_volume=2
-application/save_data="res://globals/save_data.gd"
-application/speech_suffix=".ogg"
-application/text_lang="en"
-application/voice_lang="en"
-application/speech_path="res://majorelle/audio/speech/"
-application/binaural_speech=false
-application/speech_enabled=true
-application/speech_locales_path="res://majorelle/speech_locales.gd"
-application/text_timeout_seconds=3
-application/dialog_minimum_visible_seconds=1
-application/dialog_damp_music_by_db=3
-debug/tag_untranslated_strings=true
-debug/terminate_on_errors=true
-platform/skip_cache=false
-platform/terminate_on_errors=true
-platform/action_menu_scale=2
-platform/dialog_option_height=1
-platform/dialog_type_suffix=""
-platform/dialog_force_centered=false
-platform/development_lang="en"
-platform/game_start_script="res://majorelle/game.esc"
-platform/force_text_ids=false
-platform/force_disable_typewriter_text=false
-platform/force_quit=true
-platform/force_tooltip_global_id=false
-platform/tag_untranslated_strings=true
-platform/default_object_action=""
-platform/object_action_requires_doubleclick=false
-platform/exit_button=true
-platform/screen_resizable=true
-platform/telon="res://globals/telon.tscn"
-platform/window_title_height=32
-ui/hud="res://ui/hud.tscn"
-ui/instructions=""
-ui/credits=""
-ui/end_credits=""
-ui/in_game_menu="res://ui/in_game_menu.tscn"
-ui/main_menu="res://majorelle/ui/main_menu.tscn"
-ui/confirm_popup="res://majorelle/ui/confirm_popup.tscn"
-ui/savegames=""
-ui/tooltip_follows_mouse=false
-ui/right_mouse_button_action_menu=false
-ui/action_menu=""
-ui/inventory=""
-
-[gdnative]
-
-singletons=[  ]
+texture={
+"flags/filter": true,
+"flags/mipmaps": true
+}
 
 [input]
 
@@ -95,7 +64,6 @@ inventory_toggle={
 "events": [ Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":5,"pressure":0.0,"pressed":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":7,"pressure":0.0,"pressed":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":9,"pressure":0.0,"pressed":false,"script":null)
-, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":16777218,"unicode":0,"echo":false,"script":null)
  ]
 }
 look={
@@ -141,26 +109,46 @@ use={
 "events": [ Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":2,"pressure":0.0,"pressed":false,"script":null)
  ]
 }
-game_general={
-"deadzone": 0.5,
-"events": [ Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":1,"pressed":false,"doubleclick":false,"script":null)
- ]
-}
-game_rmb={
-"deadzone": 0.5,
-"events": [ Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":2,"pressed":false,"doubleclick":false,"script":null)
- ]
-}
-game_highlight={
-"deadzone": 0.5,
-"events": [ Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":3,"pressed":false,"doubleclick":false,"script":null)
- ]
-}
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
 
 [locale]
 
-translations=PoolStringArray( "res://majorelle/translations/general.en.translation", "res://majorelle/translations/general.es.translation", "res://majorelle/translations/general.fr.translation" )
+translations=PoolStringArray( "res://translations/general.en.translation", "res://translations/general.fr.translation", "res://translations/strings_final.en.translation", "res://translations/strings_final.fr.translation", "res://translations/general.de.translation", "res://translations/strings_final.de.translation" )
+
+[platform]
+
+action_menu_scale=1
+credits="res://game/ui/credits/credits.txt"
+dialog_instance_scale=1
+dialog_option_height=2
+dialog_type_suffix=""
+disable_screen_shaders=false
+exit_button=true
+file_cases="res://game/ui/file_cases/file_cases.scn"
+gamecenter=false
+ghost_remap=""
+hud_mobile=false
+logos="res://game/logos.ogm"
+screen_resizable=true
+show_ingame_buttons=false
+telon="res://globals/telon.scn"
+use_custom_camera=false
+window_title_height=32
+windowed_available=true
 
 [rendering]
 
 quality/driver/driver_name="GLES2"
+vram_compression/import_etc=true
+quality/reflections/texture_array_reflections.mobile=true
+environment/default_clear_color=Color( 0.439216, 0.439216, 0.439216, 0.054902 )
+
+[ui]
+
+credits="res://ui/credits.tscn"
+in_game_menu=""
+main_menu="res://ui/main_menu.tscn"
+savegames=false

@@ -1,159 +1,117 @@
+#tool
+
 extends "res://globals/interactive.gd"
-
-signal left_click_on_item
-signal left_dblclick_on_item
-signal left_click_on_inventory_item
-signal right_click_on_item
-signal right_click_on_inventory_item
-signal mouse_enter_item
-signal mouse_enter_inventory_item
-signal mouse_exit_item
-signal mouse_exit_inventory_item
-
-var area
-
-# For inventory items, when in-game menu is closed, look at this to see if we're hovered
-var rect
 
 export var tooltip = ""
 export var action = ""
-
-export(NodePath) var interact_position = null
-#warning-ignore:unused_class_variable
-export var use_combine = false           # game.gd
+export(String,FILE) var events_path = ""
+export var global_id = ""
+export var use_combine = false
 export var inventory = false
-#warning-ignore:unused_class_variable
-export var use_action_menu = true        # game.gd
-
-#warning-ignore:unused_class_variable
+export var use_action_menu = true
 export(int, -1, 360) var interact_angle = -1
-#warning-ignore:unused_class_variable
-export(Color) var dialog_color = null
-export(Script) var animations
 export var talk_animation = "talk"
+export var active = true setget set_active,get_active
 export var placeholders = {}
-export var dynamic_z_index = true
-export var speed = 300
-export var scale_on_map = false
-export var light_on_map = false setget set_light_on_map
-export var is_interactive = true
-
-var orig_speed
+export var use_custom_z = false
 
 var anim_notify = null
 var anim_scale_override = null
+
 var ui_anim = null
 
+var event_table = {}
+
 var clicked = false
-var interact_pos
-var camera_pos
-var terrain
-var terrain_is_scalenodes
-var walk_path
-var walk_context
-var moved
-var last_scale = Vector2(1, 1)
-var last_deg = null
-var last_dir = 0
-var animation
-var state = ""
-var walk_destination
-var path_ofs
-var pose_scale = 1
-var task
-var sprites = []
-var audio
 
-# Godot doesn't do doubleclicks so we must
-var last_lmb_dt = 0
-var waiting_dblclick = false
+var current_scene
 
-func get_dialog_pos():
-	if has_node("dialog_pos"):
-		return $"dialog_pos".global_position
+func is_clicked():
+	   return clicked
 
-	return global_position
 
-func get_interact_pos():
-	if interact_pos:
-		return interact_pos.global_position
+func get_interact_position():
+	if has_node("interact_pos"):
+		return get_node("interact_pos").get_global_position()
+	else:
+		return (self as Node).get_global_position()
 
-	return global_position
-
-func get_camera_pos():
-	if camera_pos:
-		return camera_pos.global_position
-
-	return global_position
-
-#warning-ignore:unused_argument
+# warning-ignore:unused_argument
 func anim_finished(anim_name):
-	# TODO use parameter here?
-	if anim_notify != null:
+	if typeof(anim_notify) != typeof(null):
 		vm.finished(anim_notify)
 		anim_notify = null
 
-	if anim_scale_override != null:
-		set_scale(get_scale() * anim_scale_override)
+	if typeof(anim_scale_override) != typeof(null) && (self as Node) is Node2D:
+		(self as Node).set_scale((self as Node).get_scale() * anim_scale_override)
 		anim_scale_override = null
 
-	# Although states are permanent until changed, the underlying animations are not,
-	# so we must re-set the state for the appearance of permanence
-	set_state(state, true)
+	if anim_name != state:
+		set_state(state, true)
 
-	if animations and "idles" in animations:
-		pose_scale = animations.idles[last_dir + 1]
-		_update_terrain()
+func set_active(p_active):
+	active = p_active
+	if p_active:
+		(self as Node).show()
+	else:
+		(self as Node).hide()
 
-
+func get_active():
+	return active
 	#return is_visible()
+
+func run_event(p_ev):
+	vm.run_event(p_ev)
+
+func activate(p_action, p_param = null):
+	#printt("****** activated ", p_action, p_param, p_action in event_table)
+	#print_stack()
+	if typeof(p_param) != typeof(null):
+		p_action = p_action + " " + p_param.global_id
+	if p_action in event_table:
+		run_event(event_table[p_action])
+	else:
+		return false
+
+	return true
 
 func get_action():
 	return action
 
 func mouse_enter():
+	get_tree().call_group("game", "mouse_enter", self)
 	_check_focus(true, false)
-	if self.inventory:
-		emit_signal("mouse_enter_inventory_item", self)
-	else:
-		emit_signal("mouse_enter_item", self)
 
 func mouse_exit():
+	get_tree().call_group("game", "mouse_exit", self)
 	_check_focus(false, false)
-	if self.inventory:
-		emit_signal("mouse_exit_inventory_item", self)
-	else:
-		emit_signal("mouse_exit_item", self)
 
 func area_input(_viewport, event, _shape_idx):
-	input(event)
+	   input(event)
 
 func input(event):
-	# TODO: Expand this for other input events than mouse
+	#breaks the use combine function:
+	#if events_path == "" && event is InputEventMouseButton:
+	#	printt("This is a non interactable item.")
+	
+	#if events_path != "" && event is InputEventMouseButton && action =="":
+	#	printt("This is interactable, but no action is chosen.") 
+		
 	if event is InputEventMouseButton || event.is_action("ui_accept"):
+		#If, Else controls the focus vs. non focus of items when being clicked
+		#Everything gets to the if when being clicked as a node with the item.gd script
 		if event.is_pressed():
-			clicked = vm.hover_stack.front() == self
-
-			var ev_pos = get_global_mouse_position()
-			if event.is_action("game_general"):
-				if self.inventory:
-					emit_signal("left_click_on_inventory_item", self, ev_pos, event)
-					last_lmb_dt = 0
-					waiting_dblclick = null
-				elif last_lmb_dt <= vm.DOUBLECLICK_TIMEOUT:
-					emit_signal("left_dblclick_on_item", self, ev_pos, event)
-					last_lmb_dt = 0
-					waiting_dblclick = null
-				else:
-					last_lmb_dt = 0
-					waiting_dblclick = [ev_pos, event]
-
-			elif event.is_action("game_rmb"):
-				if self.inventory:
-					emit_signal("right_click_on_inventory_item", self, ev_pos, event)
-				else:
-					emit_signal("right_click_on_item", self, ev_pos, event)
+			clicked = true
+			printt("input is",action, events_path,event)
+			get_tree().call_group("game", "clicked", self, (self as Node).get_position())
 			_check_focus(true, true)
+			printt("IF - Item clicked with mouse.",self.name)
+		else:
+			clicked = false
+			printt("ELSE - Item unclicked with mouse.",self.name)
+			#printt(self.name)
+			#get_parent().get_node("no_interaction").activate("no_action_chosen", null)
+			_check_focus(true, false)
 
 func _check_focus(focus, pressed):
 	if has_node("_focus_in"):
@@ -168,36 +126,54 @@ func _check_focus(focus, pressed):
 		else:
 			get_node("_pressed").hide()
 
-func get_tooltip(hint=null):
-	if not tooltip:
+func get_esctooltip():
+	if TranslationServer.get_locale() == ProjectSettings.get("application/tooltip_lang_default"):
+		return tooltip
+	else:
+		if tr(tooltip) == tooltip:
+			return global_id+".tooltip"
+		else:
+			return tooltip
+
+func get_drag_data(point):
+	printt("get drag data on point ", point, inventory)
+	if !inventory:
 		return null
 
-	# if `development_lang` matches `text_lang`, don't translate
-	if TranslationServer.get_locale() == ProjectSettings.get_setting("escoria/platform/development_lang"):
-		if not global_id and ProjectSettings.get_setting("escoria/platform/force_tooltip_global_id"):
-			vm.report_errors("item", ["Missing global_id in item with tooltip '" + tooltip + "'"])
-		return tooltip
+	var c = Control.new()
+	var it = duplicate()
+	it.set_script(null)
+	it.set_position(Vector2(-50, -80))
+	c.add_child(it)
+	c.show()
+	it.show()
+	if (self as Node) is Control:
+		(self as Node).set_drag_preview(c)
 
-	# Otherwise try to return the translated tooltip
-	var tooltip_identifier = global_id + ".tooltip"
-	if hint:
-		tooltip_identifier += "." + hint
+	get_tree().call_group("background", "force_drag", global_id, c)
+	get_tree().call_group("game", "interact", [self, "use"])
 
-	var translated = tr(tooltip_identifier)
+	vm.drag_begin(global_id)
+	printt("returning for drag data", global_id)
+	return global_id
 
-	# Try again if there's no translation for this hint
-	if translated == "\"":
-		tooltip_identifier = global_id + ".tooltip"
-		translated = tr(tooltip_identifier)
+# warning-ignore:unused_argument
+# warning-ignore:unused_argument
+func can_drop_data(point, data):
+	return true # always true ?
 
-	# But if translation isn't found, ensure it can be translated and return placeholder
-	if translated == tooltip_identifier:
-		if not global_id and ProjectSettings.get_setting("escoria/platform/force_tooltip_global_id"):
-			vm.report_errors("item", ["Missing global_id in item with tooltip '" + tooltip + "'"])
+# warning-ignore:unused_argument
+func drop_data(point, data):
+	printt("dropping data ", data, global_id)
+	if data == global_id:
+		return
 
-		return tooltip_identifier
+	if !inventory:
+		return
 
-	return translated
+	get_tree().call_group("game", "clicked", self, (self as Node).get_position())
+	vm.drag_end()
+
 
 func global_changed(name):
 	var ev = "global_changed "+name
@@ -219,7 +195,8 @@ func anim_get_ph_paths(p_anim):
 	return ret
 
 func play_anim(p_anim, p_notify = null, p_reverse = false, p_flip = null):
-	if p_notify == null and (!animation or !animation.has_animation(p_anim)):
+
+	if typeof(p_notify) != typeof(null) && (!has_node("animation") || !get_node("animation").has_animation(p_anim)):
 		print("skipping cut scene '", p_anim, "'")
 		vm.finished(p_notify)
 		#_debug_states()
@@ -228,148 +205,108 @@ func play_anim(p_anim, p_notify = null, p_reverse = false, p_flip = null):
 	if p_anim in placeholders:
 		for npath in placeholders[p_anim]:
 			var node = get_node(npath)
-			if !node is InstancePlaceholder:
+			if !(node is InstancePlaceholder):
 				continue
 			var path = node.get_instance_path()
 			var res = vm.res_cache.get_resource(path)
 			node.replace_by_instance(res)
 			_find_sprites(get_node(npath))
-	if p_flip != null:
-		var s = get_scale()
-		set_scale(s * p_flip)
+
+	if p_flip != null && (self as Node) is Node2D:
+		var scale = (self as Node).get_scale()
+		(self as Node).set_scale(scale * p_flip)
 		anim_scale_override = p_flip
 	else:
 		anim_scale_override = null
 
 	if p_reverse:
-		animation.play(p_anim, -1, -1, true)
+		get_node("animation").play(p_anim, -1, -1, true)
 	else:
-		animation.play(p_anim)
+		get_node("animation").play(p_anim)
 	anim_notify = p_notify
 
 	#_debug_states()
 
-func play_snd(p_snd, p_loop=false):
-	if !audio:
-		vm.report_errors("item", ["play_snd called with no audio node"])
-		return
-
-	var resource = load(p_snd)
-	if !resource:
-		vm.report_errors("item", ["play_snd resource not found " + p_snd])
-		return
-
-	audio.stream = resource
-	audio.stream.set_loop(p_loop)
-	audio.play()
-
-	#_debug_states()
 
 func set_speaking(p_speaking):
 	printt("item set speaking! ", global_id, p_speaking, state)
 	#print_stack()
-	if !animation:
+	if !has_node("animation"):
 		return
 	if talk_animation == "":
 		return
 	if p_speaking:
-		if animation.has_animation(talk_animation):
-			animation.play(talk_animation)
-			animation.seek(0, true)
+		if get_node("animation").has_animation(talk_animation):
+			get_node("animation").play(talk_animation)
+			get_node("animation").seek(0, true)
+		#else:
+		#	set_state(state, true)
 	else:
+		if get_node("animation").is_playing():
+			get_node("animation").stop()
 		set_state(state, true)
-		if animations and "idles" in animations:
-			pose_scale = animations.idles[last_dir + 1]
-	_update_terrain()
+	pass
 
 func set_state(p_state, p_force = false):
+	printt("set state ", global_id, state, p_state, p_force)
+	#print_stack()
 	if state == p_state && !p_force:
 		return
-
-	# printt("set state ", "global_id: ", global_id, "state: ", state, "p_state: ", p_state, "p_force: ", p_force)
-
+	if has_node("animation"):
+		get_node("animation").stop()
 	state = p_state
-
 	if animation != null:
-		# Though calling `.play()` probably stops the animation, be safe.
-		animation.stop()
+		printt("has animation", animation.has_animation(p_state))
+		if animation.is_playing() && animation.get_current_animation() == p_state:
+			return
 		if animation.has_animation(p_state):
+			printt("playing animation ", p_state)
 			animation.play(p_state)
 
-func teleport(obj, angle=null):
-	set_position(obj.global_position)
-	if angle:
-		set_angle(angle)
-	moved = true
-	_update_terrain(true)
+# Simple modified teleport function that switches the objects
+func teleport(obj):
+	var origin_pos
+	var target_pos
+	origin_pos = (self as Node).get_global_position()
+	target_pos = obj.get_global_position()
+	(self as Node).set_position(target_pos)
+	obj.set_position(origin_pos)
+	_update_terrain()
 
-func teleport_pos(x, y, angle=null):
-	set_position(Vector2(x, y))
-	if angle:
-		set_angle(angle)
-	moved = true
-	_update_terrain(true)
+func teleport_pos(x, y):
+	(self as Node).set_position(Vector2(x, y))
+	_update_terrain()
 
-func _update_terrain(need_z_update=false):
-	var pos = get_position()
-
-	if dynamic_z_index and need_z_update:
-		z_index = pos.y if pos.y <= VisualServer.CANVAS_ITEM_Z_MAX else VisualServer.CANVAS_ITEM_Z_MAX
-
+func _update_terrain():
+	if (self as Node) is Node2D && !use_custom_z:
+		(self as Node).set_z_index((self as Node).get_position().y)
 	if !scale_on_map && !light_on_map:
 		return
-
-	# Items in the scene tree will issue errors unless this is conditional
-	if not terrain:
+	print("updating terrain!")
+	var pos = (self as Node).get_position()
+	var terrain = get_node("../terrain")
+	if terrain == null:
 		return
+	var color = terrain.get_terrain(pos)
+	var scale = terrain.get_scale_range(color.b)
 
-	var scale_range
-	if terrain_is_scalenodes:
-		scale_range = terrain.get_terrain(pos)
-	else:
-		var color = terrain.get_terrain(pos)
-		scale_range = terrain.get_scale_range(color.b)
-
-	# The item's - as the player's - `animations` define the direction
-	# as 1 or -1. This is stored as `pose_scale` and the easiest way
-	# to flip a node is multiply its x-axis scale.
-	scale_range.x *= pose_scale
-
-	if scale_on_map and scale_range != get_scale():
-		# Check if `interact_pos` is a child of ours, and if so,
-		# take a backup of the global position, because it will be affected by scaling.
-		var interact_global_position
-		if has_node("interact_pos"):
-			interact_global_position = interact_pos.get_global_position()
-
-		# Same for camera_pos
-		var camera_global_position
-		if has_node("camera_pos"):
-			camera_global_position = camera_pos.get_global_position()
-
-		self.scale = scale_range
-
-		# If `interact_pos` is a child, it was affected by scaling, so reset it
-		# to the expected location.
-		if interact_global_position:
-			interact_pos.global_position = interact_global_position
-
-		# And camera position
-		if camera_global_position:
-			camera_pos.global_position = camera_global_position
+	if scale_on_map && ((self as Node) is Node2D) && scale != (self as Node).get_scale():
+		var c = terrain.get_terrain(pos)
+		var s = terrain.get_scale_range(c.b)
+		(self as Node).set_scale(s)
 
 	if light_on_map:
 		var c = terrain.get_light(pos)
-		if c:
-			modulate(c)
+		printt("lights on map! ", c)
+		modulate(c)
 
 func _check_bounds():
 	#printt("checking bouds for pos ", get_position(), terrain.is_solid(get_position()))
 	if !scale_on_map:
 		return
-	if !Engine.is_editor_hint():
+	if !get_tree().is_editor_hint():
 		return
-	if terrain.is_solid(get_position()):
+	if terrain.is_solid((self as Node).get_position()):
 		if has_node("terrain_icon"):
 			get_node("terrain_icon").hide()
 	else:
@@ -405,314 +342,43 @@ func hint_request():
 func setup_ui_anim():
 	if has_node("ui_anims"):
 		ui_anim = get_node("ui_anims")
-
 		for bg in get_tree().get_nodes_in_group("background"):
-			bg.connect("right_click_on_bg", self, "hint_request")
+			bg.connect("right_click_on_bg",self,"hint_request")
 
-	var conn_err = vm.connect("global_changed", self, "global_changed")
-	if conn_err:
-		vm.report_errors("item", ["global_changed -> global_changed error: " + String(conn_err)])
 
-func set_light_on_map(p_light):
-	light_on_map = p_light
-	if light_on_map:
-		_update_terrain()
-	else:
-		modulate(Color(1, 1, 1, 1))
-
-func slide_to(pos, context = null):
-	# Assume a straight line, and leverage some walk functionality
-	walk_path = [get_position(), pos]
-	walk_context = context
-	if walk_path.size() == 0:
-		walk_stop(get_position())
-		set_process(false)
-		task = null
-		return
-
-	moved = true
-
-	walk_destination = walk_path[walk_path.size()-1]
-
-	path_ofs = 0.0
-	task = "slide"
-	set_process(true)
-
-func slide(pos, p_speed, context = null):
-	if p_speed:
-		orig_speed = speed
-		speed = p_speed
-	slide_to(pos, context)
-
-func walk_stop(pos):
-	set_position(pos)
-	walk_path = []
-
-	if orig_speed:
-		speed = orig_speed
-		orig_speed = null
-
-	# Walking is not a state, but we must re-set our previous state to reset the animation
-	set_state(state)
-
-	if task == "walk":
-		if "idles" in animations:
-			pose_scale = animations.idles[last_dir + 1]
-	_update_terrain(true)
-
-	task = null
-
-	if walk_context != null:
-		vm.finished(walk_context)
-		walk_context = null
-
-func walk_to(pos, context = null):
-	walk_path = terrain.get_terrain_path(get_position(), pos)
-	walk_context = context
-	if walk_path.size() == 0:
-		walk_stop(get_position())
-		set_process(false)
-		task = null
-		return
-	moved = true
-	walk_destination = walk_path[walk_path.size()-1]
-	if terrain.is_solid(pos):
-		walk_destination = walk_path[walk_path.size()-1]
-	path_ofs = 0.0
-	task = "walk"
-	set_process(true)
-
-func walk(pos, p_speed, context = null):
-	if p_speed:
-		orig_speed = speed
-		speed = p_speed
-	walk_to(pos, context)
-
-func modulate(color):
-	for s in sprites:
-		s.set_modulate(color)
-
-func _physics_process(dt):
-	last_lmb_dt += dt
-
-	if waiting_dblclick and last_lmb_dt > vm.DOUBLECLICK_TIMEOUT:
-		emit_signal("left_click_on_item", self, waiting_dblclick[0], waiting_dblclick[1])
-		last_lmb_dt = 0
-		waiting_dblclick = null
-
-func _process(time):
-	if task == "walk" or task == "slide":
-		var to_walk = speed * last_scale.x * time
-		var pos = get_position()
-		var old_pos = pos
-		if walk_path.size() > 0:
-			while to_walk > 0:
-				var next
-				if walk_path.size() > 1:
-					next = walk_path[path_ofs + 1]
-				else:
-					next = walk_path[path_ofs]
-
-				var dist = pos.distance_to(next)
-
-				if dist > to_walk:
-					var n = (next - pos).normalized()
-					pos = pos + n * to_walk
-					break
-				pos = next
-				to_walk -= dist
-				path_ofs += 1
-				if path_ofs >= walk_path.size() - 1:
-					walk_stop(walk_destination)
-					set_process(false)
-					return
-
-		var angle = (old_pos.angle_to_point(pos)) * -1
-
-		set_position(pos)
-
-		if task == "walk":
-			last_deg = vm._get_deg_from_rad(angle)
-			last_dir = vm._get_dir_deg(last_deg, animations)
-
-			if animation:
-				if animation.get_current_animation() != animations.directions[last_dir]:
-					animation.play(animations.directions[last_dir])
-				pose_scale = animations.directions[last_dir+1]
-
-		# If a z-indexed item is moved, forcibly update its z index
-		_update_terrain(true)
-
-func turn_to(deg):
-	if deg < 0 or deg > 360:
-		vm.report_errors("interactive", ["Invalid degree to turn to " + str(deg)])
-
-	moved = true
-
-	last_deg = deg
-	last_dir = vm._get_dir_deg(deg, animations)
-
-	if animation and animations and "directions" in animations:
-		if !animation.get_current_animation() or animation.get_current_animation() != animations.directions[last_dir]:
-			# XXX: This requires manually scripting a wait
-			# and setting the correct idle animation
-			animation.play(animations.directions[last_dir])
-		pose_scale = animations.directions[last_dir + 1]
-		_update_terrain()
-
-func set_angle(deg):
-	if deg < 0 or deg > 360:
-		# Compensate for savegame files during a broken version of Escoria
-		if vm.loading_game:
-			vm.report_warnings("interactive", ["Reset invalid degree " + str(deg)])
-			deg = 0
-		else:
-			vm.report_errors("interactive", ["Invalid degree to turn to " + str(deg)])
-
-	moved = true
-
-	last_deg = deg
-	last_dir = vm._get_dir_deg(deg, animations)
-
-	if animation and animations and "idles" in animations:
-		pose_scale = animations.idles[last_dir + 1]
-		_update_terrain()
-
-func _find_sprites(p = null):
-	if p is CanvasItem:
-		sprites.push_back(p)
-	for i in range(0, p.get_child_count()):
-		_find_sprites(p.get_child(i))
-
-func update_rect():
-	# Called from inventory.gd when items get sorted
-	assert(self.inventory)
-	assert(area is TextureRect)
-
-	# Now that we know we are TextureRect, create a Rect2 so we can check `.has_point()` when closing the menu
-	rect = Rect2(area.rect_global_position, area.rect_size)
+	vm.connect("global_changed", self, "global_changed")
 
 func _ready():
-	add_to_group("item")
 
 	if Engine.is_editor_hint():
 		return
 
-	var conn_err
-
-	# {{{ Check for interaction area and connect signals only if the item is interactive
-	if is_interactive:
-		if has_node("area"):
-			area = get_node("area")
-			# XXX: Inventory items as Area2D did not work. z-index?
-			if not self.inventory and not area is Area2D:
-				vm.report_errors("item", ["Child area is not Area2D in " + self.global_id])
-			elif self.inventory and not area is TextureRect:
-				vm.report_errors("inventory item", ["Child area is not TextureRect in " + self.global_id])
-		else:
-			area = self
-			if area is Position2D:
-				vm.report_warnings("item", ["The Position2D node named " + self.global_id + " is probably erroneously marked as interactive."])
-			elif not area is Area2D and not area is Position2D:
-				vm.report_errors("item", ["Background item area is not Area2D nor Position2D in " + self.global_id])
-
-		if ClassDB.class_has_signal(area.get_class(), "input_event"):
-			conn_err = area.connect("input_event", self, "area_input")
-			if conn_err:
-				vm.report_errors("item", ["area.input_event -> area_input error: " + String(conn_err)])
-		elif ClassDB.class_has_signal(area.get_class(), "gui_input"):
-			conn_err = area.connect("gui_input", self, "input")
-			if conn_err:
-				vm.report_errors("item", ["area.gui_input -> input error: " + String(conn_err)])
-		else:
-			vm.report_warnings("item", ["No input events possible for global_id " + global_id])
-
-		# These signals proxy the proper signals for regular and inventory items
-		if ClassDB.class_has_signal(area.get_class(), "mouse_entered"):
-			conn_err = area.connect("mouse_entered", self, "mouse_enter")
-			if conn_err:
-				vm.report_errors("item", ["mouse_entered -> mouse_enter error: " + String(conn_err)])
-
-			conn_err = area.connect("mouse_exited", self, "mouse_exit")
-			if conn_err:
-				vm.report_errors("item", ["mouse_exited -> mouse_exit error: " + String(conn_err)])
-
-		conn_err = connect("left_click_on_item", $"/root/scene/game", "ev_left_click_on_item")
-		if conn_err:
-			vm.report_errors("item", ["left_click_on_item -> ev_left_click_on_item error: " + String(conn_err)])
-
-		conn_err = connect("left_dblclick_on_item", $"/root/scene/game", "ev_left_dblclick_on_item")
-		if conn_err:
-			vm.report_errors("item", ["left_dblclick_on_item -> ev_left_dblclick_on_item error: " + String(conn_err)])
-
-		conn_err = connect("left_click_on_inventory_item", $"/root/scene/game", "ev_left_click_on_inventory_item")
-		if conn_err:
-			vm.report_errors("item", ["left_click_on_inventory_item -> ev_left_click_on_inventory_item error: " + String(conn_err)])
-
-		conn_err = connect("right_click_on_item", $"/root/scene/game", "ev_right_click_on_item")
-		if conn_err:
-			vm.report_errors("item", ["right_click_on_item -> ev_right_click_on_item error: " + String(conn_err)])
-
-		conn_err = connect("right_click_on_inventory_item", $"/root/scene/game", "ev_right_click_on_inventory_item")
-		if conn_err:
-			vm.report_errors("item", ["right_click_on_inventory_item -> ev_right_click_on_inventory_item error: " + String(conn_err)])
-
-
-		conn_err = connect("mouse_enter_item", $"/root/scene/game", "ev_mouse_enter_item")
-		if conn_err:
-			vm.report_errors("item", ["mouse_enter_item -> ev_mouse_enter_item error: " + String(conn_err)])
-
-		conn_err = connect("mouse_enter_inventory_item", $"/root/scene/game", "ev_mouse_enter_inventory_item")
-		if conn_err:
-			vm.report_errors("item", ["mouse_enter_inventory_item -> ev_mouse_enter_inventory_item error: " + String(conn_err)])
-
-		conn_err = connect("mouse_exit_item", $"/root/scene/game", "ev_mouse_exit_item")
-		if conn_err:
-			vm.report_errors("item", ["mouse_exit_item -> ev_mouse_exit_item error: " + String(conn_err)])
-
-		conn_err = connect("mouse_exit_inventory_item", $"/root/scene/game", "ev_mouse_exit_inventory_item")
-		if conn_err:
-			vm.report_errors("item", ["mouse_exit_inventory_item -> ev_mouse_exit_inventory_item error: " + String(conn_err)])
-
-		if interact_position:
-			interact_pos = get_node(interact_position)
-		elif has_node("interact_pos"):
-			interact_pos = $"interact_pos"
-		# }}}
-
-	if has_node("camera_pos"):
-		camera_pos = $"camera_pos"
-
+	var area
+	if has_node("area"):
+		area = get_node("area")
+	else:
+		area = self
+	if area is Area2D:
+		area.connect("gui_input", self, "area_input")
+	else:
+		area.connect("gui_input", self, "input")
+	area.connect("mouse_entered", self, "mouse_enter")
+	area.connect("mouse_exited", self, "mouse_exit")
+	vm = get_tree().get_root().get_node("vm")
 	if events_path != "":
 		event_table = vm.compile(events_path)
-
-	# Forbit pipe because it's used to separate flags from actions, like in `:use item | TK`. And space for good measure.
-	for c in ["|", " "]:
-		if c in global_id:
-			vm.report_errors("item", ["Forbidden character '" + c + "' in global_id: " + global_id])
-
+	if global_id != "":
+		vm.register_object(global_id, self)
 	if has_node("animation"):
-		animation = $"animation"
-		conn_err = animation.connect("animation_finished", self, "anim_finished")
-		if conn_err:
-			vm.report_errors("item", ["animation_finished -> anim_finished error: " + String(conn_err)])
-
-	if has_node("audio"):
-		audio = $"audio"
-		audio.set_bus("SFX")
+		# warning-ignore:return_value_discarded
+		get_node("animation").connect("animation_finished", self, "anim_finished")
 
 	_check_focus(false, false)
 
-	if has_node("../terrain"):
-		terrain = $"../terrain"
-		terrain_is_scalenodes = terrain is preload("terrain_scalenodes.gd")
+	call_deferred("setup_ui_anim")
 
-	_find_sprites(self)
+	call_deferred("_update_terrain")
 
-	# Initialize Node2D items' terrain status like z-index.
-	# Stationary items will be set up correctly and
-	# if an item moves, it will handle this in its _process() loop
-	_update_terrain(true)
-
-	vm.register_object(global_id, self)
-
+#End of game button
+func _on_end_game_pressed():
+	get_node("/root/main").load_menu(ProjectSettings.get("ui/credits"))

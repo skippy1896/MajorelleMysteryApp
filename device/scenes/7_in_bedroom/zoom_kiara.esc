@@ -1,0 +1,4 @@
+:talk
+set_state kiara tip1
+say telon bedroom_kiara_zoom:"bedroom_kiara_zoom" right_left
+set_state kiara default

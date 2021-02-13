@@ -1,3 +1,5 @@
+var global = null
+var vm
 var current_context
 
 func check_obj(name, cmd):
@@ -7,29 +9,12 @@ func check_obj(name, cmd):
 		return false
 	return true
 
-func _slide(params, block):
-	if !check_obj(params[0], "slide"):
-		return vm.state_return
-	if !check_obj(params[1], "slide"):
-		return vm.state_return
-	var tpos = vm.get_object(params[1]).get_interact_pos()
-	var speed = 0
-	if params.size() > 2:
-		speed = int(params[2])
-	if block:
-		current_context.waiting = true
-		vm.get_object(params[0]).slide(tpos, speed, current_context)
-		return vm.state_yield
-	else:
-		vm.get_object(params[0]).slide(tpos, speed)
-		return vm.state_return
-
 func _walk(params, block):
 	if !check_obj(params[0], "walk"):
 		return vm.state_return
 	if !check_obj(params[1], "walk"):
 		return vm.state_return
-	var tpos = vm.get_object(params[1]).get_interact_pos()
+	var tpos = vm.get_object(params[1]).get_interact_position()
 	var speed = 0
 	if params.size() > 2:
 		speed = int(params[2])
@@ -47,17 +32,10 @@ func set_global(params):
 	vm.set_global(params[0], params[1])
 	return vm.state_return
 
-func dec_global(params):
-	vm.dec_global(params[0], params[1])
-	return vm.state_return
-
-func inc_global(params):
-	vm.inc_global(params[0], params[1])
-	return vm.state_return
-
 func debug(params):
 	for p in params:
-		printt(p)
+		printraw(p)
+	printraw("\n")
 	return vm.state_return
 
 func anim(params):
@@ -76,26 +54,12 @@ func anim(params):
 	obj.play_anim(anim_id, null, reverse, flip)
 	return vm.state_return
 
-func play_snd(params):
-	if !check_obj(params[0], "play_snd"):
-		return vm.state_return
-	var obj = vm.get_object(params[0])
-	var snd_id = params[1]
-	var loop = false
-	if params.size() == 3 and params[2]:
-		loop = true
-	obj.play_snd(snd_id, loop)
-	return vm.state_return
-
 func set_state(params):
 	var obj = vm.get_object(params[0])
 	if obj != null:
 		obj.set_state(params[1])
 	vm.set_state(params[0], params[1])
 	return vm.state_return
-
-func set_hud_visible(params):
-	vm.set_hud_visible(params[0])
 
 func say(params):
 	if !check_obj(params[0], "say"):
@@ -106,13 +70,8 @@ func say(params):
 
 func dialog(params):
 	current_context.waiting = true
-	current_context.in_dialog = true
 	vm.dialog(params, current_context)
 	return vm.state_yield
-
-func end_dialog(params):
-	current_context.in_dialog = false
-	vm.end_dialog(params)
 
 func cut_scene(params):
 	if !check_obj(params[0], "cut_scene"):
@@ -132,18 +91,16 @@ func cut_scene(params):
 	return vm.state_yield
 
 func branch(params):
-	var branch_ev = vm.compiler.EscoriaEvent.new("branch", params, [])
-
-	return vm.add_level(branch_ev, false)
+	return vm.add_level(params, false)
 
 func inventory_add(params):
 	vm.inventory_set(params[0], true)
 	return vm.state_return
 
-func inventory_remove(params):
+func inventory_remove_and_collide(params):
 	vm.inventory_set(params[0], false)
 	return vm.state_return
-
+	
 func inventory_open(params):
 	vm.emit_signal("open_inventory", params[0])
 
@@ -154,59 +111,31 @@ func set_active(params):
 	vm.set_active(params[0], params[1])
 	return vm.state_return
 
-#warning-ignore:unused_argument
+# warning-ignore:unused_argument
 func stop(params):
 	return vm.state_break
 
-#warning-ignore:unused_argument
+# warning-ignore:unused_argument
 func repeat(params):
 	return vm.state_repeat
 
-#warning-ignore:unused_argument
 func wait(params):
 	return vm.wait(params, current_context)
-
-func set_interactive(params):
-	var obj = vm.get_object(params[0])
-	if obj:
-		obj.set_interactive(params[1])
-	vm.set_interactive(params[0], params[1])
-	return vm.state_return
-
-func set_speed(params):
-	var obj = vm.get_object(params[0])
-	vm.set_speed(obj, params[1])
 
 func teleport(params):
 	if !check_obj(params[0], "teleport"):
 		return vm.state_return
 	if !check_obj(params[1], "teleport"):
 		return vm.state_return
-
-	var angle
-	if params.size() > 2:
-		angle = int(params[2])
-
-	vm.get_object(params[0]).teleport(vm.get_object(params[1]), angle)
+	vm.get_object(params[0]).teleport(vm.get_object(params[1]))
 	return vm.state_return
 
 func teleport_pos(params):
 	if !check_obj(params[0], "teleport_pos"):
 		return vm.state_return
-
-	var angle
-	if params.size() > 3:
-		angle = int(params[3])
-
-	vm.get_object(params[0]).teleport_pos(int(params[1]), int(params[2]), angle)
+	vm.get_object(params[0]).teleport_pos(int(params[1]), int(params[2]))
 	return vm.state_return
 
-
-func slide(params):
-	return _slide(params, false)
-
-func slide_block(params):
-	return _slide(params, true)
 
 func walk(params):
 	return _walk(params, false)
@@ -214,32 +143,20 @@ func walk(params):
 func walk_block(params):
 	return _walk(params, true)
 
-func turn_to(params):
-	var obj = vm.get_object(params[0])
-	obj.turn_to(int(params[1]))
-	return vm.state_return
-
-func set_angle(params):
-	var obj = vm.get_object(params[0])
-	obj.set_angle(int(params[1]))
-	return vm.state_return
-
 func change_scene(params):
-	# Savegames must have events disabled, so saving the game adds a false to params
-	var run_events = true
-	if params.size() == 2:
-		run_events = bool(params[1])
-
 	# looking for localized string format in scene. this should be somewhere else
 	var sep = params[0].find(":\"")
 	if sep >= 0:
 		var path = params[0].substr(sep + 2, params[0].length() - (sep + 2))
-		vm.call_deferred("change_scene", [path], current_context, run_events)
+		vm.call_deferred("change_scene", [path], current_context)
 	else:
-		vm.call_deferred("change_scene", params, current_context, run_events)
+		vm.call_deferred("change_scene", params, current_context)
 
 	current_context.waiting = true
 	return vm.state_yield
+
+func queue_scene(params):
+	vm.res_cache.queue_resource(params[0])
 
 func spawn(params):
 	return vm.spawn(params)
@@ -255,18 +172,7 @@ func dialog_config(params):
 func sched_event(params):
 	var time = params[0]
 	var obj = params[1]
-	var event
-	if params.size() == 3:
-		event = params[2]
-	else:
-		# This should be easier in Godot 3.1 with array slicing
-		for i in range(2, params.size()):
-			var word = params[i]
-			if not event:
-				event = word
-			else:
-				event += " %s" % word
-
+	var event = params[2]
 	if !check_obj(obj, "sched_event"):
 		return
 	var o = vm.get_object(obj)
@@ -276,73 +182,33 @@ func sched_event(params):
 	vm.sched_event(time, obj, event)
 
 func custom(params):
-	var obj = vm.get_object(params[0])
-	# Do not error out because `obj` may not be present in every room of the game,
-	# making it (probably) safe to ignore it being missing.
-	if obj == null:
-		return
+	var node = vm.get_node(params[0])
+	if node == null:
+		vm.report_errors("", ["Node not found for custom: "+params[0]])
 
-	if not obj.has_node("custom"):
-		vm.report_errors("custom", ["Node 'custom' not found for " + params[0]])
-
-	obj.get_node("custom").call(params[1], params)
+	if params.size() > 2:
+		node.call(params[1], params)
+	else:
+		node.call(params[1])
 
 func camera_set_target(params):
-	# Pass strings in so vm can resolve what to do with them
 	var speed = params[0]
-	if params.size() > 2:
-		var targets = []
-		for i in range(1, params.size()):
-			targets.push_back(params[i])
-		vm.camera_set_target(speed, targets)
-	else:
-		vm.camera_set_target(speed, params[1])
+	var targets = []
+	for i in range(1, params.size()):
+		targets.push_back(params[i])
+	vm.camera_set_target(speed, targets)
 
-func camera_set_drag_margin_enabled(params):
-	var dm_h_enabled = params[0]
-	var dm_v_enabled = params[0]
-	vm.camera_set_drag_margin_enabled(dm_h_enabled, dm_v_enabled)
-
-func camera_set_pos(params):
+func camera_set_position(params):
 	var speed = params[0]
 	var pos = Vector2(params[1], params[2])
 	vm.camera_set_target(speed, pos)
-
-func camera_set_zoom(params):
-	var magnitude = params[0]
-	var time = params[1] if params.size() > 1 else 0
-	vm.camera_set_zoom(magnitude, float(time))
-
-func camera_set_zoom_height(params):
-	var magnitude = params[0] / vm.game_size.y
-	var time = params[1] if params.size() > 1 else 0
-	vm.camera_set_zoom(magnitude, float(time))
-
-func camera_push(params):
-	var target = params[0]
-	var time = params[1] if params.size() > 1 else 1
-	var type = params[2] if params.size() > 2 else "QUAD"
-
-	vm.camera_push(target, time, type)
-
-func camera_shift(params):
-	var x = params[0]
-	var y = params[1]
-	var time = params[2] if params.size() > 2 else 1
-	var type = params[3] if params.size() > 3 else "QUAD"
-
-	vm.camera_shift(x, y, time, type)
 
 func set_globals(params):
 	var pat = params[0]
 	var val = params[1]
 	vm.set_globals(pat, val)
 
-func accept_input(params):
-	var p_input = params[0]
-	var input = vm.acceptable_inputs["INPUT_" + p_input]
-	vm.set_accept_input(input)
-
+# warning-ignore:unused_argument
 func autosave(params):
 	vm.request_autosave()
 
@@ -420,3 +286,12 @@ func resume(context):
 			return vm.state_jump
 	context.ip = 0
 	return vm.state_return
+
+func set_vm(p_vm):
+	vm = p_vm
+
+func _init():
+	#print("*************** vm level init")
+	#vm = get_tree().get_singleton("vm")
+	pass
+

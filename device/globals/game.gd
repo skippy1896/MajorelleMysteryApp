@@ -1,510 +1,167 @@
 extends Node
 
+var vm
 var player
 var mode = "default"
+var action_menu = null
+var inventory
 export(String,FILE) var fallbacks_path = ""
 export var inventory_enabled = true setget set_inventory_enabled
+export var buttons_enabled = true setget set_buttons_enabled
 var fallbacks
 var check_joystick = false
 var joystick_mode = false
 var min_interact_dist = 50*50
 var last_obj = null
 
-export var drag_margin_left = 0.2
-export var drag_margin_top = 0.2
-export var drag_margin_right = 0.2
-export var drag_margin_bottom = 0.2
+var current_action = ""
+var current_tool = null
 
 var click
 var click_anim
 
-var default_obj_action
-var obj_action_req_dblc
-
 var camera
 export var camera_limits = Rect2()
-
-var hud
-var action_menu
 
 func set_mode(p_mode):
 	mode = p_mode
 
-func can_click():
-	# Check certain global state to see if an object could be clicked
+func mouse_enter(obj):
+	var text
+	var tt = obj.get_esctooltip()
+	if current_action == "use" && current_tool != null:
+		text = tr(current_action + ".combine_id")
+		text = text.replace("%2", tr(tt))
+		text = text.replace("%1", tr(current_tool.get_esctooltip()))
+	elif current_action != "" :
+		text = tr(current_action+".id")
+		text = text.replace("%1", tr(tt))
+	elif obj.inventory:
+		var action = inventory.get_action()
+		if action == "":
+			action = current_action
+		text = tr(action + ".id")
+		text = text.replace("%1", tr(tt))
+	else:
+		text = tt
+	get_tree().call_group("hud", "set_tooltip", text)
+	vm.hover_begin(obj)
 
+# warning-ignore:unused_argument
+func mouse_exit(obj):
+	var text
+	#var tt = obj.get_tooltip()
+	if current_action != "" && current_tool != null:
+		text = tr(current_action + ".id")
+		text = text.replace("%1", tr(current_tool.get_esctooltip()))
+	else:
+		text = ""
+	get_tree().call_group("hud", "set_tooltip", text)
+	vm.hover_end()
+
+func clear_action():
+	current_tool = null
+
+func clear_current_action():
+	current_action = null
+
+func set_current_action(p_act):
+	if p_act != current_action:
+		set_current_tool(null)
+	current_action = p_act
+
+func get_current_action():
+	return current_action
+
+func set_current_tool(p_tool):
+	current_tool = p_tool
+
+func clicked(obj, pos):
+	# If multiple areas are clicked at once, an item_background "wins"
+	if obj is Area2D:
+		for area in obj.get_overlapping_areas():
+			if area.has_method("is_clicked") and area.is_clicked():
+				return
+	joystick_mode = false
 	if !vm.can_interact():
-		return false
-
-	if !player:
-		return false
-
-	if mode != "default":
-		return false
-
-	if vm.accept_input != vm.acceptable_inputs.INPUT_ALL:
-		return false
-
-	return true
-
-func ev_left_click_on_bg(obj, pos, event):
-	printt(obj.name, "left-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
 		return
+	if player == null:
+		player = self
+	if mode == "default":
+		var action = obj.get_action()
+		#action_menu.stop()
+		if action == "walk":
 
-	if vm.action_menu:
-		vm.action_menu.stop()
-
-	# If it's possible to click outside the inventory, don't walk but only close it
-	if vm.inventory and vm.inventory.blocks_tooltip():
-		vm.inventory.close()
-		return
-
-	var walk_context = {"fast": event.doubleclick}
-
-	# Make it possible to abort an interaction before the player interacts
-	if player.interact_status == player.interact_statuses.INTERACT_WALKING:
-		# by overriding the interaction status
-		player.interact_status = player.interact_statuses.INTERACT_NONE
-		player.params_queue = null
-		player.walk_to(pos, walk_context)
-		return
-
-	if click:
-		click.set_position(pos)
-	if click_anim:
-		click_anim.play("click")
-
-	player.walk_to(pos, walk_context)
-
-	if vm.tooltip:
-		if not vm.current_tool:
-			vm.tooltip.hide()
-
-func ev_left_click_on_trigger(obj, pos, event):
-	printt(obj.name, "left-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	# Do not allow input on triggers/exits with inventory open
-	if vm.inventory and vm.inventory.blocks_tooltip():
-		return
-
-	if vm.action_menu and vm.action_menu.is_visible():
-		vm.action_menu.stop()
-
-	player.walk_to(pos)
-
-func ev_left_dblclick_on_trigger(obj, pos, event):
-	printt(obj.name, "left-dblclicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.action_menu and vm.action_menu.is_visible():
-		vm.action_menu.stop()
-		return
-
-	if obj.dblclick_teleport and obj.tooltip:
-		player.set_position(pos)
-	else:
-		player.walk_to(pos, {"fast": true})
-
-func ev_left_click_on_item(obj, pos, event):
-	printt(obj.name, "left-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.action_menu and obj.use_action_menu:
-		if !ProjectSettings.get_setting("escoria/ui/right_mouse_button_action_menu"):
-			spawn_action_menu(obj)
-			return
-		elif vm.action_menu.is_visible():
-			# XXX: Can't close action menu here or doubleclick would cause an action
-			if obj == vm.hover_object:
+			#click.set_position(pos)
+			#click_anim.play("click")
+			if player == self:
 				return
+			player.walk_to(pos)
+			get_tree().call_group("hud", "set_tooltip", "")
+
+		elif obj.inventory:
+			if current_action == "use" && obj.use_combine && current_tool == null:
+				set_current_tool(obj)
+				get_tree().call_group("verb_menu", "something_picked")
 			else:
-				vm.action_menu.stop()
+				interact([obj, current_action, current_tool])
+				printt("1 ",obj.name,current_action,current_tool)
+				current_action=""
+				get_tree().call_group("verb_menu", "reset_mouse",current_action)
+				
+		# Added Use_Combine functionality for items that are not in the inventory /sh
+		elif !obj.inventory && current_action == "use":
+			if  obj.use_combine && current_tool == null:
+				set_current_tool(obj)
+				get_tree().call_group("verb_menu", "something_picked")
+			else:
+				printt("2 ",obj.name,current_action,current_tool)
+				if obj.is_in_group("puzzle") or obj.get_parent().is_in_group("puzzle"):
+					interact([obj, current_action, current_tool])
+					get_tree().call_group("verb_menu", "reset_picked")
+				else:
+					interact([obj, current_action, current_tool])
+					current_action=""
+					get_tree().call_group("verb_menu", "reset_mouse",current_action)
+					printt("Mouse should be reset.")
+		
+		elif action != "":
+			player.interact([obj, action, current_tool])
+			printt("3 ",obj.name,action,current_tool)
+			action=""
+			get_tree().call_group("verb_menu", "reset_mouse",current_action)
+			printt("Mouse should be reset.")
 
-	if vm.inventory and vm.inventory.blocks_tooltip():
-		vm.inventory.close()
-		if vm.tooltip:
-			vm.tooltip.update()
-		return
+		elif current_action != "":
+			player.interact([obj, current_action, current_tool])
+			printt("4 ",obj.name,current_action,current_tool)
+			current_action=""
+			get_tree().call_group("verb_menu", "reset_mouse",current_action)
+			printt("Mouse should be reset.")
+		
+		elif action_menu == null:
 
-	# Many overlapping items can receive the click event,
-	# but only the topmost is really `clicked`
-	if not obj.clicked:
-		return
-
-	var walk_context = {"fast": event.doubleclick}
-
-	# Make it possible to abort an interaction before the player interacts
-	if player.interact_status == player.interact_statuses.INTERACT_WALKING:
-		# by overriding the interaction status
-		player.interact_status = player.interact_statuses.INTERACT_NONE
-		player.params_queue = null
-		player.walk_to(pos, walk_context)
-		return
-
-	var obj_action = obj.get_action()
-	var action = "walk"
-
-	# Start off by checking a non-doubleclick default action
-	if not obj_action_req_dblc:
-		if obj_action:
-			action = obj_action
-		elif default_obj_action:
-			action = default_obj_action
-
-	if click:
-		click.set_position(pos)
-	if click_anim:
-		click_anim.play("click")
-
-	if obj.has_method("get_interact_pos"):
-		pos = obj.get_interact_pos()
-
-	player.walk_to(pos, walk_context)
-
-	# XXX: Interacting with current_tool etc should be a signal
-	if action != "walk" or vm.current_action:
-		if vm.inventory and not vm.inventory.blocks_tooltip():
-			player.interact([obj, vm.current_action, vm.current_tool])
-
-func ev_left_dblclick_on_item(obj, pos, event):
-	printt(obj.name, "left-dblclicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.action_menu and vm.action_menu.is_visible():
-		vm.action_menu.stop()
-		return
-
-	var walk_context = {"fast": event.doubleclick}
-
-	# Make it possible to abort an interaction before the player interacts
-	if player.interact_status == player.interact_statuses.INTERACT_WALKING:
-		# by overriding the interaction status
-		player.interact_status = player.interact_statuses.INTERACT_NONE
-		player.params_queue = null
-		player.walk_to(pos, walk_context)
-
-	var action = "walk"
-
-	# Cannot use the object action if an action and tool is selected,
-	# because the event is probably not defined
-	var obj_action
-	if vm.current_action and vm.current_tool:
-		obj_action = vm.current_action
-	else:
-		obj_action = obj.get_action()
-
-	# See if there's a doubleclick default action
-	if obj_action_req_dblc:
-		if obj_action:
-			action = obj_action
-		elif default_obj_action:
-			action = default_obj_action
-
-	if click:
-		click.set_position(pos)
-	if click_anim:
-		click_anim.play("click")
-
-	if action != "walk":
-		# Resolve telekinesis
-		if action in obj.event_table:
-			if player.task == "walk":
-				player.walk_stop(player.get_position())
-				vm.clear_current_action()
-
-		player.interact([obj, action, vm.current_tool])
-	else:
-		player.walk_to(pos, walk_context)
-
-func ev_right_click_on_item(obj, pos, event):
-	printt(obj.name, "right-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	var inventory_open = vm.inventory and vm.inventory.blocks_tooltip()
-
-	if obj.use_action_menu and not inventory_open:
-		if ProjectSettings.get_setting("escoria/ui/right_mouse_button_action_menu"):
-			spawn_action_menu(obj)
-			return
-	elif inventory_open:
-		vm.inventory.close()
-
-func ev_left_click_on_inventory_item(obj, pos, event):
-	printt(obj.name, "left-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	# Use and look are the only valid choices with an action menu
-	if vm.action_menu:
-		vm.set_current_action("use")
-
-	if vm.current_action == "use" and obj.use_combine:
-		if not vm.current_tool:
-			vm.set_current_tool(obj)
-		elif vm.current_tool != obj:
-			interact([obj, vm.current_action, vm.current_tool])
-
-	if vm.tooltip:
-		vm.tooltip.update()
-
-func ev_right_click_on_inventory_item(obj, pos, event):
-	printt(obj.name, "right-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.current_tool:
-		vm.clear_current_tool()
-		if vm.tooltip:
-			vm.tooltip.update()
-	else:
-		# Do not set `look` as permanent action
-		interact([obj, "look"])
-		# XXX: Moving the mouse during `:look` will cause the tooltip to disappear
-		# so the following is a good-enough-for-now fix for it
-		if vm.tooltip:
-			vm.tooltip.update()
-
-func ev_mouse_enter_item(obj):
-	if obj.inventory:
-		vm.report_errors("game", ["Mouse entered inventory non-inventory item: " + obj.global_id])
-
-	printt(obj.name, "mouse_enter_item")
-
-	vm.hover_push(obj)
-
-	if vm.tooltip:
-		# XXX: The warning report may be removed if it turns out to be too annoying in practice
-		if not obj.get_tooltip():
-			# For a passive item, it's fine to set an empty tooltip, but if we have a passive and
-			# an active esc_type.ITEM overlapping, say a window and a light that will move later,
-			# the tooltip may be emptied by the light not having a tooltip. This is because the
-			# `mouse_enter` events have no guaranteed order.
-			vm.report_warnings("game", ["No tooltip for item " + obj.name])
-
-func ev_mouse_enter_inventory_item(obj):
-	if not vm.inventory:
-		vm.report_errors("game", ["Mouse entered inventory item without inventory: " + obj.global_id])
-	if not obj.inventory:
-		vm.report_errors("game", ["Mouse entered non-inventory inventory item: " + obj.global_id])
-
-	printt(obj.name, "mouse_enter_inventory_item")
-
-	if vm.tooltip:
-		# XXX: The warning report may be removed if it turns out to be too annoying in practice
-		if not obj.get_tooltip():
-			# For a passive item, it's fine to set an empty tooltip, but if we have a passive and
-			# an active esc_type.ITEM overlapping, say a window and a light that will move later,
-			# the tooltip may be emptied by the light not having a tooltip. This is because the
-			# `mouse_enter` events have no guaranteed order.
-			vm.report_warnings("game", ["No tooltip for item " + obj.name])
-
-	vm.hover_push(obj)
-
-func ev_mouse_exit_item(obj):
-	printt(obj.name, "mouse_exit_item")
-
-	vm.hover_pop(obj)
-
-func ev_mouse_exit_inventory_item(obj):
-	printt(obj.name, "mouse_exit_inventory_item")
-
-	vm.hover_pop(obj)
-
-func ev_mouse_enter_trigger(obj):
-	printt(obj.name, "mouse_enter_trigger")
-
-	vm.hover_push(obj)
-
-	if vm.tooltip:
-		# XXX: The warning report may be removed if it turns out to be too annoying in practice
-		if not obj.get_tooltip():
-			# For a passive item, it's fine to set an empty tooltip, but if we have a passive and
-			# an active esc_type.ITEM overlapping, say a window and a light that will move later,
-			# the tooltip may be emptied by the light not having a tooltip. This is because the
-			# `mouse_enter` events have no guaranteed order.
-			vm.report_warnings("game", ["No tooltip for trigger " + obj.name])
-
-func ev_mouse_exit_trigger(obj):
-	printt(obj.name, "mouse_exit_trigger")
-
-	vm.hover_pop(obj)
-
-func ev_mouse_enter_npc(obj):
-	printt(obj.name, "mouse_enter_npc")
-
-	vm.hover_push(obj)
-
-	if vm.tooltip:
-		# XXX: The warning report may be removed if it turns out to be too annoying in practice
-		if not obj.get_tooltip():
-			vm.report_warnings("game", ["No tooltip for npc " + obj.name])
-
-func ev_left_click_on_npc(obj, pos, event):
-	printt(obj.name, "left-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.action_menu and obj.use_action_menu:
-		if !ProjectSettings.get_setting("escoria/ui/right_mouse_button_action_menu"):
-			spawn_action_menu(obj)
-			return
-		elif vm.action_menu.is_visible():
-			# XXX: Can't close action menu here or doubleclick would cause an action
-			if obj == vm.hover_object:
+			# same as action == "walk"
+			if player == self:
 				return
-			else:
-				vm.action_menu.stop()
+			player.walk_to(pos)
+			get_tree().call_group("hud", "set_tooltip", "")
 
-	if vm.inventory and vm.inventory.blocks_tooltip():
-		vm.inventory.close()
-		if vm.tooltip:
-			vm.tooltip.update()
-		return
-
-	# Many overlapping items can receive the click event,
-	# but only the topmost is really `clicked`
-	if not obj.clicked:
-		return
-
-	var walk_context = {"fast": event.doubleclick}
-
-	# Make it possible to abort an interaction before the player interacts
-	if player.interact_status == player.interact_statuses.INTERACT_WALKING:
-		# by overriding the interaction status
-		player.interact_status = player.interact_statuses.INTERACT_NONE
-		player.params_queue = null
-		player.walk_to(pos, walk_context)
-		return
-
-	var obj_action = obj.get_action()
-	var action = "walk"
-
-	# Start off by checking a non-doubleclick default action
-	if not obj_action_req_dblc:
-		if obj_action:
-			action = obj_action
-		elif default_obj_action:
-			action = default_obj_action
-
-	if click:
-		click.set_position(pos)
-	if click_anim:
-		click_anim.play("click")
-
-	if obj.has_method("get_interact_pos"):
-		pos = obj.get_interact_pos()
-
-	player.walk_to(pos, walk_context)
-
-	# XXX: Interacting with current_tool etc should be a signal
-	if action != "walk" or vm.current_action:
-		if vm.inventory and not vm.inventory.blocks_tooltip():
-			player.interact([obj, vm.current_action, vm.current_tool])
-
-func ev_left_dblclick_on_npc(obj, pos, event):
-	printt(obj.name, "left-dblclicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	if vm.action_menu and vm.action_menu.is_visible():
-		vm.action_menu.stop()
-		return
-
-	var walk_context = {"fast": event.doubleclick}
-
-	# Make it possible to abort an interaction before the player interacts
-	if player.interact_status == player.interact_statuses.INTERACT_WALKING:
-		# by overriding the interaction status
-		player.interact_status = player.interact_statuses.INTERACT_NONE
-		player.params_queue = null
-		player.walk_to(pos, walk_context)
-
-	var action = "walk"
-
-	# Cannot use the object action if an action and tool is selected,
-	# because the event is probably not defined
-	var obj_action
-	if vm.current_action and vm.current_tool:
-		obj_action = vm.current_action
-	else:
-		obj_action = obj.get_action()
-
-	# See if there's a doubleclick default action
-	if obj_action_req_dblc:
-		if obj_action:
-			action = obj_action
-		elif default_obj_action:
-			action = default_obj_action
-
-	if click:
-		click.set_position(pos)
-	if click_anim:
-		click_anim.play("click")
-
-	if action != "walk":
-		# Resolve telekinesis
-		if action in obj.event_table:
-			if player.task == "walk":
-				player.walk_stop(player.get_position())
-				vm.clear_current_action()
-
-		player.interact([obj, action, vm.current_tool])
-	else:
-		player.walk_to(pos, walk_context)
-
-func ev_right_click_on_npc(obj, pos, event):
-	printt(obj.name, "right-clicked at", pos, "with", event, can_click())
-
-	if not can_click():
-		return
-
-	var inventory_open = vm.inventory and vm.inventory.blocks_tooltip()
-
-	if obj.use_action_menu and not inventory_open:
-		if ProjectSettings.get_setting("escoria/ui/right_mouse_button_action_menu"):
+		elif obj.use_action_menu && action_menu != null:
 			spawn_action_menu(obj)
-			return
-	elif inventory_open:
-		vm.inventory.close()
-
-func ev_mouse_exit_npc(obj):
-	printt(obj.name, "mouse_exit_npc")
-
-	vm.hover_pop(obj)
 
 func spawn_action_menu(obj):
-	if vm.action_menu == null:
+	if action_menu == null:
 		return
-
-	if vm.tooltip and (vm.current_tool or vm.current_action):
-		vm.tooltip.hide()
-		vm.clear_current_tool()
-		vm.clear_current_action()
-
-	if player:
-		player.walk_stop(player.position)
-
-	var pos = get_viewport().get_mouse_position()
-	vm.action_menu.set_position(pos)
-	vm.action_menu.show()
-	vm.action_menu.start(obj)
+	action_menu.show()
+	var pos
+	if obj.has_node("action_menu_pos"):
+		pos = obj.get_node("action_menu_pos").get_global_position()
+	else:
+		pos = obj.get_global_position()
+	action_menu.set_position(pos)
+	action_menu.start(obj)
+	#obj.grab_focus()
 
 func action_menu_selected(obj, action):
 	if action == "use" && obj.get_action() != "":
@@ -513,26 +170,28 @@ func action_menu_selected(obj, action):
 		player.interact([obj, action])
 	else:
 		interact([obj, action])
-	vm.action_menu.stop()
+	action_menu.stop()
 
 func interact(p_params):
 	if mode == "default":
 		var obj = p_params[0]
-		vm.clear_action()
+		clear_action()
 		var action = p_params[1]
 		if !action:
 			action = obj.get_action()
 
 		if p_params.size() > 2:
-			vm.clear_action()
+			clear_action()
 			if obj == p_params[2]:
 				return
 			#inventory.close()
 			activate(obj, action, p_params[2])
+			printt("Activated this",obj.name,action,p_params[2])
 		else:
 			#inventory.close()
 			activate(obj, action)
-			vm.clear_action()
+			printt("Activated that",obj.name,action)
+			clear_action()
 		return
 
 func activate(obj, action, param = null):
@@ -547,6 +206,7 @@ func activate(obj, action, param = null):
 				return
 		fallback(obj, action, param)
 
+# warning-ignore:unused_argument
 func fallback(obj, action, param = null):
 	if fallbacks == null:
 		return
@@ -557,11 +217,6 @@ func fallback(obj, action, param = null):
 			vm.run_event(fallbacks[comb])
 			return
 	if action in fallbacks:
-		if player:
-			# Resolve the angle to look toward and call `walk_stop` to make magic happen
-			player.resolve_angle_to(obj)
-			player.walk_stop(player.position)
-
 		vm.run_event(fallbacks[action])
 		return
 	vm.report_errors(fallbacks_path, ["Invalid action " + comb + " in fallbacks."])
@@ -575,49 +230,24 @@ func scene_input(event):
 			check_joystick = true
 			set_process(true)
 
+	if event is InputEventMouseButton && !event.is_pressed() && event.button_index == BUTTON_LEFT:
+		if vm.drag_object != null:
+			vm.drag_end()
+
+
 	if event.is_action("menu_request") && event.is_pressed() && !event.is_echo():
-		handle_menu_request()
+		if vm.can_save() && vm.can_interact() && vm.menu_enabled():
+			get_node("/root/main").load_menu(ProjectSettings.get("ui/main_menu"))
+		else:
+			#get_tree().call_group(0, "game", "ui_blocked")
+			if vm.menu_enabled():
+				get_node("/root/main").load_menu(ProjectSettings.get("ui/in_game_menu"))
+			else:
+				get_tree().call_group("game", "ui_blocked")
 
-func handle_menu_request():
-	var menu_enabled = vm.menu_enabled()
-	if vm.can_save() and vm.can_interact() and menu_enabled:
-		# Do not display overlay menu with action menu or inventory, it looks silly and weird
-		if vm.action_menu:
-			if vm.action_menu.is_visible():
-				vm.action_menu.stop()
 
-		# Forcibly close inventory without animation if collapsible and visible
-		if vm.inventory and vm.inventory.blocks_tooltip():
-			vm.inventory.force_close()
-
-		# Clear hover/tooltip state to be rebuilt when menu is closed
-		vm.hover_teardown()
-
-		# Finally show the menu
-		main.load_menu(ProjectSettings.get_setting("escoria/ui/in_game_menu"))
-	elif not menu_enabled:
-		get_tree().call_group("game", "ui_blocked")
-
-func menu_closed():
-	printt("menu_closed")
-	## We may be hovering a HUD button which is over an item;
-	# make it look like it would in gameplay
-	if hud:
-		# These are set up in hud.gd only if the corresponding button is available
-		if hud.menu_toggle_rect:
-			if hud.menu_toggle_rect.has_point($"/root".get_mouse_position()):
-				hud.hud_button_entered()
-				return
-
-		if hud.inv_toggle_rect:
-			if hud.inv_toggle_rect.has_point($"/root".get_mouse_position()):
-				hud.hud_button_entered()
-				return
-
-	## Otherwise rebuild hover stack
-	vm.hover_rebuild()
-
-func _process(_delta):
+# warning-ignore:unused_argument
+func _process(time):
 	if !vm.can_interact():
 		check_joystick = false
 		return
@@ -638,7 +268,7 @@ func _process(_delta):
 				continue
 			if objs[key].tooltip == "":
 				continue
-			var objpos = objs[key].get_interact_pos()
+			var objpos = objs[key].get_interact_position()
 			var odist = pos.distance_squared_to(objpos)
 			if typeof(mobj) == typeof(null):
 				mobj = objs[key]
@@ -649,12 +279,13 @@ func _process(_delta):
 					mobj = objs[key]
 		if typeof(mobj) != typeof(null):
 			if mdist < min_interact_dist:
-				if mobj != last_obj:
+				if true || mobj != last_obj:
 					spawn_action_menu(mobj)
-#					mouse_enter(mobj)
+					mouse_enter(mobj)
 					last_obj = mobj
 			else:
-#				mouse_exit(mobj)
+				#action_menu.stop()
+				mouse_exit(mobj)
 				last_obj = null
 
 	if !check_joystick:
@@ -672,95 +303,71 @@ func set_inventory_enabled(p_enabled):
 	if !has_node("hud_layer/hud/inv_toggle"):
 		return
 	if inventory_enabled:
-		$"hud_layer/hud/inv_toggle".show()
+		get_node("hud_layer/hud/inventory").show()
 	else:
-		$"hud_layer/hud/inv_toggle".hide()
+		get_node("hud_layer/hud/inventory").hide()
+
+func set_buttons_enabled(p_enabled):
+	buttons_enabled = p_enabled
 
 func set_camera_limits():
-	var limits = {}
-	if camera_limits.size.x == 0 and camera_limits.size.y == 0:
+	var cam_limit = camera_limits
+	if camera_limits.size.x == 0 && camera_limits.size.y == 0:
+		var p = get_parent()
 		var area = Rect2()
-		for child in get_parent().get_children():
-			if child is esc_type.BACKGROUND:
-				var pos = child.get_global_position()
-				var size = child.get_texture().get_size()
-				if child.global_scale.x != 1 or child.global_scale.y != 1:
-					size.x *= child.global_scale.x
-					size.y *= child.global_scale.y
+		for i in range(0, p.get_child_count()):
+			var c = p.get_child(i)
+			if !(c is preload("res://globals/background.gd")):
+				continue
+			var pos = c.get_global_position()
+			var size = c.get_size()
+			area = area.expand(pos)
+			area = area.expand(pos + size)
 
-				area = area.expand(pos)
-				area = area.expand(pos + size)
+		camera.set_limit(MARGIN_LEFT, area.position.x)
+		camera.set_limit(MARGIN_RIGHT, area.position.x + area.size.x)
+		var cam_top = area.position.y # - get_node("/root/main").screen_ofs.y
+		camera.set_limit(MARGIN_TOP, cam_top)
+		camera.set_limit(MARGIN_BOTTOM, cam_top + area.size.y)
 
-		# if the background is smaller than the viewport, we want the camera to stick centered on the background
-		if area.size.x == 0 or area.size.y == 0 or area.size < get_viewport().size:
-			printt("No limit area! Using viewport")
-			area.size = get_viewport().size
+		if area.size.x == 0 || area.size.y == 0:
+			area.size.x = 1600
+			area.size.y = 1200
 
 		printt("setting camera limits from scene ", area)
-		limits = {
-			"limit_left": area.position.x,
-			"limit_right": area.position.x + area.size.x,
-			"limit_top": area.position.y,
-			"limit_bottom": area.position.y + area.size.y,
-			"set_default": true,
-		}
+		cam_limit = area
 	else:
-		limits = {
-			"limit_left": camera_limits.position.x,
-			"limit_right": camera_limits.position.x + camera_limits.size.x,
-			"limit_top": camera_limits.position.y,
-			"limit_bottom": camera_limits.position.y + camera_limits.size.y + main.screen_ofs.y * 2,
-			"set_default": true,
-		}
+		camera.set_limit(MARGIN_LEFT, camera_limits.position.x)
+		camera.set_limit(MARGIN_RIGHT, camera_limits.position.x + camera_limits.size.x)
+		camera.set_limit(MARGIN_TOP, camera_limits.position.y)
+		camera.set_limit(MARGIN_BOTTOM, camera_limits.position.y + camera_limits.size.y + get_node("/root/main").screen_ofs.y * 2)
 		printt("setting camera limits from parameter ", camera_limits)
 
-	camera.set_limits(limits)
-	camera.set_offset(main.screen_ofs * 2)
+	camera.set_offset(get_node("/root/main").screen_ofs * 2)
+	vm.set_cam_limits(cam_limit)
 
 	#vm.update_camera(0.000000001)
 
 func load_hud():
 	var hres = vm.res_cache.get_resource(vm.get_hud_scene())
-	$"hud_layer/hud".replace_by_instance(hres)
-
-	hud = $"hud_layer/hud"
-
-	# Add inventory to hud layer, usually hud_minimal.tscn, if found in project settings
-	# and not present in the `game` scene's hud.
+	get_node("hud_layer/hud").replace_by_instance(hres)
+	inventory = get_node("hud_layer/hud/inventory")
 	if inventory_enabled:
-		if hud.has_node("inventory"):
-			var inventory = hud.get_node("inventory")
-			vm.register_inventory(inventory)
-			printt("Found inventory in hud", hud)
-		else:
-			var inventory_scene = ProjectSettings.get_setting("escoria/ui/inventory")
-			if inventory_scene:
-				var inventory = load(inventory_scene).instance()
-				if inventory and inventory is esc_type.INVENTORY:
-					vm.register_inventory(inventory)
-					if vm.inventory.is_collapsible:
-						vm.inventory.hide()
-					hud.add_child(vm.inventory)
-					hud.move_child(vm.inventory, 0)
-					printt("Added inventory to hud", hud)
+		get_node("hud_layer/hud/inventory").show()
+	else:
+		get_node("hud_layer/hud/inventory").hide()
+	if buttons_enabled:
+		get_node("hud_layer/hud/verb_menu").show()
+	else:
+		get_node("hud_layer/hud/verb_menu").hide()
 
-	if has_node("hud_layer/hud/inv_toggle"):
-		if inventory_enabled:
-			$"hud_layer/hud/inv_toggle".show()
-		else:
-			$"hud_layer/hud/inv_toggle".hide()
-
-	# Add action menu to hud layer if found in project settings
-	if ProjectSettings.get_setting("escoria/ui/action_menu"):
-		action_menu = load(ProjectSettings.get_setting("escoria/ui/action_menu")).instance()
-		if action_menu:
-			$"hud_layer".add_child(action_menu)
 
 func _ready():
 	add_to_group("game")
-	if has_node("../player"):
-		player = $"../player"
-
+	vm = get_tree().get_root().get_node("vm")
+	#player = get_node("../player")
+	if has_node("action_menu"):
+		action_menu = get_node("action_menu")
 	if fallbacks_path != "":
 		fallbacks = vm.compile(fallbacks_path)
 
@@ -768,23 +375,11 @@ func _ready():
 		click = get_node("click")
 	if has_node("click_anim"):
 		click_anim = get_node("click_anim")
-
-	default_obj_action = ProjectSettings.get_setting("escoria/platform/default_object_action")
-	obj_action_req_dblc = ProjectSettings.get_setting("escoria/platform/object_action_requires_doubleclick")
+	#set_process_input(true)
 
 	camera = get_node("camera")
-
-	camera.drag_margin_left = drag_margin_left
-	camera.drag_margin_top = drag_margin_top
-	camera.drag_margin_right = drag_margin_right
-	camera.drag_margin_bottom = drag_margin_bottom
 
 	vm.set_camera(camera)
 
 	call_deferred("set_camera_limits")
 	call_deferred("load_hud")
-
-func _exit_tree():
-	if action_menu:
-		action_menu.free()
-

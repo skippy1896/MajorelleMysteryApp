@@ -1,0 +1,9 @@
+:use
+set_active d2 false
+set_active diff2 true
+set_global found2 true
+
+:look
+set_active d2 false
+set_active diff2 true
+set_global found2 true

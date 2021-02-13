@@ -1,18 +1,22 @@
 extends Control
 
 var background = null
+var vm
 
-var inv_toggle_rect = null
-var menu_toggle_rect = null
+func set_tooltip(text):
+	printt("hud got tooltip text ", text)
+	get_node("tooltip").set_text(text)
 
 func inv_toggle():
-	$"inventory".toggle()
+	#get_node("inventory").toggle()
+	pass
 
-func _on_inventory_toggle_visibility_changed():
-	if $inv_toggle.is_hidden():
-		$buttons.hide()
+
+func _on_inv_toggle_vis_chaged():
+	if (get_node("inv_toggle").is_hidden()):
+		get_node("buttons").hide()
 	else:
-		$buttons.show()
+		get_node("buttons").show()
 
 func _on_hint_pressed():
 	printt("hint pressed")
@@ -21,15 +25,15 @@ func _on_hint_pressed():
 
 func _on_menu_pressed():
 	printt("menu pressed")
-	get_tree().call_group("game", "handle_menu_request")
+	if vm.can_save() && vm.can_interact() && vm.menu_enabled():
+		get_node("/root/main").load_menu("res://game/ui/main_menu.xml")
+	else:
+		#get_tree().call_group(0, "game", "ui_blocked")
+		if vm.menu_enabled():
+			get_node("/root/main").load_menu("res://game/ui/in_game_menu.scn")
+		else:
+			get_tree().call_group("game", "ui_blocked")
 
-func hud_button_entered():
-	# printt("hud button mouse entered")
-	vm.hover_teardown()
-
-func hud_button_exited():
-	# printt("hud button mouse exited")
-	vm.hover_rebuild()
 
 func menu_opened():
 	hide()
@@ -37,54 +41,33 @@ func menu_opened():
 func menu_closed():
 	show()
 
-func set_visible(p_visible):
-	visible = p_visible
-
-func setup_inv_toggle():
-	var conn_err = $"inv_toggle".connect("pressed", self, "inv_toggle")
-	if conn_err:
-		vm.report_errors("hud", ["inv_toggle.pressed -> inv_toggle error: " + String(conn_err)])
-
-	conn_err = $"inv_toggle".connect("mouse_entered", self, "hud_button_entered")
-	if conn_err:
-		vm.report_errors("hud", ["inv_toggle.mouse_entered -> hud_button_entered error: " + String(conn_err)])
-
-	conn_err = $"inv_toggle".connect("mouse_exited", self, "hud_button_exited")
-	if conn_err:
-		vm.report_errors("hud", ["inv_toggle.mouse_exited -> hud_button_exited error: " + String(conn_err)])
-
-	$"inv_toggle".set_focus_mode(Control.FOCUS_NONE)
-
-	inv_toggle_rect = Rect2($"inv_toggle".rect_global_position, $"inv_toggle".rect_size)
-
-func setup_menu_toggle():
-	var conn_err = $"menu".connect("pressed", self, "_on_menu_pressed")
-	if conn_err:
-		vm.report_errors("hud", ["menu.pressed -> _on_menu_pressed error: " + String(conn_err)])
-
-	conn_err = $"menu".connect("mouse_entered", self, "hud_button_entered")
-	if conn_err:
-		vm.report_errors("hud", ["menu.mouse_entered -> hud_button_entered error: " + String(conn_err)])
-
-	conn_err = $"menu".connect("mouse_exited", self, "hud_button_exited")
-	if conn_err:
-		vm.report_errors("hud", ["menu.mouse_exited -> hud_button_exited error: " + String(conn_err)])
-
-	$"menu".set_focus_mode(Control.FOCUS_NONE)
-
-	menu_toggle_rect = Rect2($"menu".rect_global_position, $"menu".rect_size)
-
 func _ready():
+	vm = get_node("/root/vm")
 	add_to_group("hud")
 	add_to_group("game")
+	#get_node("inv_toggle").connect("pressed", self, "inv_toggle")
+	#get_node("inv_toggle").set_focus_mode(Control.FOCUS_NONE)
+	
+	#get_node("buttons").hide()
+	if ProjectSettings.get("platform/show_ingame_buttons"):
+		if (not get_node("inv_toggle").is_hidden()):
+			get_node("buttons").show()
+		
+		var p = get_parent().get_parent().get_parent()
+		for i in range(0, p.get_child_count()):
+			var c = p.get_child(i)
+			if (c is preload("res://globals/background.gd")):
+				background = c
+				break
+				
+	# warning-ignore:return_value_discarded
+		get_node("inv_toggle").connect("visibility_changed",self,"_on_inv_toggle_vis_chaged")
+	# warning-ignore:return_value_discarded
+		get_node("buttons/hints").connect("pressed",self,"_on_hint_pressed")
+	# warning-ignore:return_value_discarded
+		get_node("buttons/menu").connect("pressed",self,"_on_menu_pressed")
+	
 
-	if has_node("inv_toggle"):
-		setup_inv_toggle()
+	set_tooltip("")
 
-	if has_node("menu"):
-		setup_menu_toggle()
-
-	# Hide verb menu if hud layer has an action menu
-	if has_node("../action_menu"):
-		$verb_menu.hide()
 

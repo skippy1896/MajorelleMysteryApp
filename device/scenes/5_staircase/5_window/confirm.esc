@@ -1,0 +1,32 @@
+:load
+> [staircase_window_solved]
+ set_active staircase_frame true
+ set_active staircase_solved_window true
+ say telon staircase_window_solved:"staircase_window_solved" default avatar_luis
+ set_global i/inv_flower1 true
+ cut_scene telon fade_out
+ change_scene res://scenes/5_staircase/scene.tscn
+ set_active staircase_window false
+ set_active kiara_fullsize true
+ set_active staircase_kiara false
+ cut_scene telon fade_in
+ set_state staircase_plants disappear
+ wait 3
+ say telon staircase_kiara_upstairs:"staircase_kiara_upstairs" right_left
+ set_active staircase_plants false
+ set_active upstairs true
+
+
+> [!staircase_window_solved]
+ say telon staircase_window_unsolved:"staircase_window_unsolved"
+
+
+#Functions needed so it doesn't matter which action is currently active in the background.
+
+:talk
+
+:use
+
+:look
+
+:use

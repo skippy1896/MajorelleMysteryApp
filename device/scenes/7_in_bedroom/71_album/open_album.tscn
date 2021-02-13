@@ -1,0 +1,87 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://globals/item.gd" type="Script" id=1]
+[ext_resource path="res://scenes/7_in_bedroom/sprites/corner_beige.png" type="Texture" id=2]
+[ext_resource path="res://scenes/7_in_bedroom/sprites/book_real.png" type="Texture" id=5]
+[ext_resource path="res://scenes/7_in_bedroom/sprites/corner_green.png" type="Texture" id=6]
+[ext_resource path="res://scenes/7_in_bedroom/71_album/www.gd" type="Script" id=7]
+
+[node name="open_album" type="Node2D"]
+script = ExtResource( 1 )
+
+[node name="area" type="TextureRect" parent="."]
+margin_left = 174.0
+margin_top = 134.0
+margin_right = 1283.0
+margin_bottom = 934.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="photo_left_top" type="TextureRect" parent="."]
+margin_left = 274.0
+margin_top = 188.0
+margin_right = 688.0
+margin_bottom = 490.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+tooltip = "Jane and Louis Majorelle sitting in the terrace of the Villa Majorelle"
+global_id = "album_photo_left_top"
+
+[node name="photo_left_bottom" type="TextureRect" parent="."]
+margin_left = 340.0
+margin_top = 520.0
+margin_right = 660.0
+margin_bottom = 876.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+tooltip = "Jane Majorelle in the bedroom"
+global_id = "album_photo_left_bottom"
+placeholders = {
+
+}
+
+[node name="photo_right" type="TextureRect" parent="."]
+margin_left = 788.0
+margin_top = 248.0
+margin_right = 1150.0
+margin_bottom = 686.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+tooltip = "Jane Majorelle greeting two guests at the front door of the Villa Majorelle"
+global_id = "album_photo_right"
+placeholders = {
+
+}
+
+[node name="album" type="Sprite" parent="."]
+position = Vector2( 724, 522 )
+texture = ExtResource( 5 )
+
+[node name="web" type="TextureRect" parent="."]
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+tooltip = "To the website of Villa Majorelle"
+global_id = "web"
+
+[node name="www" type="TextureButton" parent="web"]
+margin_left = 1057.88
+margin_top = 697.293
+margin_right = 1215.88
+margin_bottom = 890.293
+texture_normal = ExtResource( 2 )
+texture_pressed = ExtResource( 6 )
+texture_hover = ExtResource( 6 )
+texture_focused = ExtResource( 6 )
+script = ExtResource( 7 )
+__meta__ = {
+"_edit_use_anchors_": false
+}

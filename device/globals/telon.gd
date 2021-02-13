@@ -1,42 +1,100 @@
-extends Control
+extends "res://globals/item.gd"
 
-onready var white = $"white"
+var catching_input = false
+var item_anim
+var item_anim_holder
 
-var animation
-var anim_notify
+export var music_volume = 1.0
 
-export var global_id = "telon"
+func set_input_catch(p_catch):
+	if catching_input == p_catch:
+		return
+	if p_catch:
+		get_node("input_catch").set_mouse_filter(Control.MOUSE_FILTER_PASS)
+	else:
+		get_node("input_catch").set_mouse_filter(Control.MOUSE_FILTER_IGNORE)
+	catching_input = p_catch
+	set_process_input(p_catch)
 
-func set_input_disabled(p_input_disabled):
-	$"/root".set_disable_input(p_input_disabled)
-	vm.set_global("save_disabled", str(p_input_disabled))
-	vm.report_warnings("telon", ["Deprecated interface, use 'accept_input NONE' instead"])
+	return
+# warning-ignore:unreachable_code
+	var anim = get_node("animation")
+	if p_catch:
+		anim.play("catch_input")
+		set_process_input(true)
+	else:
+		anim.play("release_input")
+		set_process_input(false)
+	catching_input = p_catch
+
+func _input(event):
+	if event.is_pressed() && event.is_action("ui_accept"):
+		get_tree().call_group("events", "skipped")
+
+func input_event(event):
+	if event is InputEventMouseButton && event.pressed && event.button_index == BUTTON_LEFT:
+		get_tree().call_group("events", "skipped")
 
 func game_cleared():
-	self.disconnect("tree_exited", vm, "object_exit_scene")
-	vm.register_object(global_id, self)
+	if global_id != "":
+		vm.register_object(global_id, self)
 
-#warning-ignore:unused_argument
-func anim_finished(anim_name):
-	if anim_notify != null:
-		vm.finished(anim_notify)
-		anim_notify = null
+func set_volume(p_vol):
+	AudioServer.set_bus_volume_db(0, p_vol)
+
+# warning-ignore:unused_argument
+func _process(time):
+	set_volume(music_volume)
+
+func global_changed(name):
+
+	return
+	# warning-ignore:unreachable_code
+	#printt("global changed at telon! ", name)
+	if name.find("i/") != 0:
+		return
+
+	if !vm.get_global(name):
+		return
+
+	#if item_anim.is_playing():
+	#	return
+
+	# get item by its id?
+	var itemid = name.substr(2, name.length() - 2)
+	var obj = vm.get_object(itemid)
+	if obj == null:
+		return
+	var item = obj.duplicate()
+	item.set_script(null)
+
+	printt("is item ", itemid, item)
+
+	item_anim_holder.add_child(item)
+	item.set_position(Vector2(0, 0))
+	item.show()
+	item_anim.play("new_item")
+
+func item_anim_finished():
+	var cur = item_anim.get_current_animation()
+	printt("item anim finished at telon ", cur)
+	if cur == "new_item":
+		while item_anim_holder.get_child_count() > 0:
+			var it = item_anim_holder.get_child(0)
+			it.free()
 
 func saved():
-	## XXX: This should be implemented somewhere in the game data tree!
 	#get_node("indicators_anim").play("saved")
 	pass
 
 func ui_blocked():
-	## XXX: This should be implemented somewhere in the game data tree!
 	#get_node("indicators_anim").play("ui_blocked")
 	pass
 
 func setup_vm():
 	printt("vm on telon is ", vm)
-	var conn_err = vm.connect("saved", self, "saved")
-	if conn_err:
-		vm.report_errors("telon", ["saved -> saved error: " + String(conn_err)])
+	#vm.connect("global_changed", self, "global_changed")
+	vm.connect("saved", self, "saved")
 	printt("connected")
 
 func rand_seek(p_node = null):
@@ -44,6 +102,8 @@ func rand_seek(p_node = null):
 		p_node = "music"
 
 	var node = get_node(p_node)
+	#node.play()
+	#return
 
 	var length = node.get_length()
 	printt("length is ", length)
@@ -54,42 +114,20 @@ func rand_seek(p_node = null):
 	var pos = length * r
 	printt("seek to ", pos, r)
 
-	node.seek_pos(pos)
+	node.seek_position(pos)
 	if !node.is_playing():
 		node.play()
 
-func telon_play_anim(p_anim):
-	# Play animations like `get_tree().call_group("game", "telon_play_anim", "fade_in")`
-	animation.play(p_anim)
-
-## Have the unused arguments because API
-#warning-ignore:unused_argument
-#warning-ignore:unused_argument
-func play_anim(p_anim, p_notify = null, p_reverse = false, p_flip = null):
-	# A simple wrapper that implements the `cut_scene`/`anim` API
-	anim_notify = p_notify
-	return telon_play_anim(p_anim)
-
-func cut_to_black():
-	white.visible = true
-	white.self_modulate = "000000"
-	white.modulate = "ffffff"
-
-func cut_to_scene():
-	white.visible = false
-
 func _ready():
-	var conn_err
-
-	animation = $"animation"
-
-	vm.register_object(global_id, self)
-
-	conn_err = animation.connect("animation_finished", self, "anim_finished")
-	if conn_err:
-		vm.report_errors("telon", ["animation_finished -> anim_finished error: " + String(conn_err)])
-
+	#._ready()
+	# warning-ignore:return_value_discarded
+	get_node("input_catch").connect("gui_input", self, "input_event")
+	get_node("input_catch").set_size(Vector2(ProjectSettings.get("display/game_width"), ProjectSettings.get("display/game_height")))
+	if get_node("animation").has_animation("release_input"):
+		get_node("animation").play("release_input")
 	add_to_group("game")
 
 	call_deferred("setup_vm")
+	
+
 

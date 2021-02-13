@@ -1,0 +1,36 @@
+:use inv_lightbulb
+
+set_global i/inv_lightbulb false
+
+set_active button_tutorial false
+set_active inventory_tutorial false
+set_active lightbulb_tutorial false
+set_active lightbulb_missing false
+set_active lamp true
+
+say lamp entrance_light_on:"entrance_light_on" right_left avatar_luis
+set_active entrance_ghost false
+
+set_state kiara tip2
+say telon kiara_tutorial:"kiara_tutorial" right_left
+say telon kiara_tutorial2:"kiara_tutorial2" right_left
+set_active kiara false
+set_active kiara_tutorial true
+anim kiara_tutorial default
+wait 3.5
+
+cut_scene telon fade_out
+change_scene res://scenes/2_hallway/scene.tscn
+set_state hallway_ghost standing
+set_active kiara true
+set_state kiara default
+cut_scene telon fade_in
+set_state hallway_plants disappear
+wait 2
+set_active hallway_plants false
+say telon hallway_jacques:"hallway_jacques" left_right avatar_jacques
+set_state hallway_ghost default
+wait 3
+set_active hallway_ghost false
+
+say telon hallway_artur:"hallway_artur" right_right avatar_artur

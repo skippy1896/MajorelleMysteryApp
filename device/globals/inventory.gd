@@ -1,15 +1,14 @@
-extends TextureRect
+extends Control
 
-export(bool) var is_collapsible = false
-
+var vm
+var item_list = []
 var page = 0
+
+var actions = []
 
 var page_max
 var page_size
 var current_action = ""
-
-func blocks_tooltip():
-	return self.is_collapsible and self.is_visible()
 
 func change_page(dir):
 	page += dir
@@ -22,66 +21,22 @@ func change_page(dir):
 func open():
 	if is_visible():
 		return
-
-	if vm.action_menu:
-		# `false` is for show_tooltip=false
-		vm.action_menu.stop(false)
-
 	sort_items()
-
 	show()
+	get_node("animation").play("show")
 
-	print("inventory open")
-
-	if has_node("animation"):
-		get_node("animation").play("show")
-
-func show():
-	.show()
-
-	if vm.tooltip:
-		vm.tooltip.update()
 
 func close():
 	if !is_visible():
 		return
-
-	if vm.tooltip:
-		# If we are closing while hovering ...
-		if vm.hover_object:
-			# ... an inventory item ...
-			if vm.hover_object is esc_type.ITEM and vm.hover_object.inventory:
-				# ... we must exit it to sort out the tooltip
-				vm.hover_object.emit_signal("mouse_exit_inventory_item", vm.hover_object)
-
-	if has_node("animation"):
-		if $"animation".is_playing():
-			return
-		$"animation".play("hide")
-
-	# XXX: What is this `look` node? A verb menu thing?
-	if has_node("look"):
-		get_node("look").set_pressed(false)
-
-	current_action = ""
-	hide()
-	print("inventory close")
-
-func hide():
-	.hide()
-
-	if vm.tooltip:
-		vm.tooltip.update()
-
-func force_close():
-	if !is_visible():
+	if get_node("animation").is_playing():
 		return
-
-	if vm.tooltip:
-		vm.tooltip.hide()
-	hide()
-	printt("inventory force_close")
-
+	#printt("closing inventory")
+	print_stack()
+	get_node("animation").play("hide")
+	get_node("look").set_pressed(false)
+	current_action = ""
+	print("inventory close")
 
 func toggle():
 	if is_visible():
@@ -89,8 +44,8 @@ func toggle():
 	else:
 		open()
 
-func anim_finished(name):
-	if name == "hide":
+func anim_finished(anim_name):
+	if anim_name == "hide":
 		hide()
 
 func sort_items():
@@ -110,11 +65,11 @@ func sort_items():
 			var slot = count - page_size * page
 			c.show()
 			printt("showing item", c.global_id, slots.get_child(slot).get_global_position())
-
+			#printt("no focus")
 			c.set_global_position(slots.get_child(slot).get_global_position())
-			c.update_rect()  # To see if we're hovered when in-game menu closes
-
+			#c.set_focus_mode(Control.FOCUS_NONE)
 			if !focus:
+				#c.grab_focus()
 				focus = true
 		else:
 			c.hide()
@@ -137,8 +92,13 @@ func global_changed(name):
 	inventory_changed()
 
 func input(event):
-	if event.type == InputEvent.MOUSE_BUTTON && event.pressed:
+	if event is InputEventMouseButton && event.pressed:
 		toggle()
+
+	if event is InputEventMouseMotion:
+		#printt("mouse motion on alpha", get_node("../../..").pending_command)
+		if get_node("../../..").pending_command != "" || vm.drag_object != null:
+			toggle()
 
 func get_action():
 	return current_action
@@ -148,75 +108,42 @@ func look_toggled(pressed):
 		current_action = "look"
 	else:
 		current_action = "use"
-	get_tree().call_group_flags(SceneTree.GROUP_CALL_DEFAULT, "game", "clear_action")
+	get_tree().call_group("game", "clear_action")
 
 func _input(event):
 	if !vm.can_interact():
 		return
-	if event.is_pressed() and event.is_action("inventory_toggle") and is_collapsible:
+	if event.is_pressed() && event.is_action("inventory_toggle"):
 		toggle()
 
 func log_button_pressed():
 	close()
-	get_tree().call_group_flags(SceneTree.GROUP_CALL_DEFAULT, "game", "open_log")
-
+	get_tree().call_group("game", "open_log")
+	
 func _on_open_inventory_signal(open):
 	if (open):
 		open()
 	else:
 		close()
 
-func mouse_entered():
-	# Must tear down the hovers or we might get side-effects when something is under
-	# a non-blocking inventory
-	vm.hover_teardown()
-
-func mouse_exited():
-	# Restore the expected state if it was reset when entering
-	vm.hover_rebuild()
+func action_pressed(n):
+	current_action = n
+	for but in actions:
+		but.set_pressed(but.get_name() == n)
 
 func _ready():
-	var conn_err
-
-	conn_err = vm.connect("inventory_changed", self, "inventory_changed")
-	if conn_err:
-		vm.report_errors("inventory", ["inventory_changed -> inventory_changed error: " + String(conn_err)])
-
-	conn_err = vm.connect("open_inventory", self, "_on_open_inventory_signal")
-	if conn_err:
-		vm.report_errors("inventory", ["open_inventory -> _on_open_inventory_signal error: " + String(conn_err)])
-
-	conn_err = vm.connect("global_changed", self, "global_changed")
-	if conn_err:
-		vm.report_errors("inventory", ["global_changed -> global_changed error: " + String(conn_err)])
-
+	vm = get_tree().get_root().get_node("vm")
+	vm.connect("inventory_changed", self, "inventory_changed")
+	vm.connect("open_inventory", self, "_on_open_inventory_signal")
+	vm.connect("global_changed", self, "global_changed")
 	page_size = get_node("slots").get_child_count()
-
-	# XXX: Not sure why, but sorting a collapsible inventory here causes textures to disappear
-	if not self.is_collapsible:
-		sort_items()
-
-	if has_node("arrow_prev"):
-		conn_err = $"arrow_prev".connect("pressed", self, "change_page", [-1])
-		if conn_err:
-			vm.report_errors("inventory", ["arrow_prev.pressed -> change_page -1 error: " + String(conn_err)])
-
-	if has_node("arrow_next"):
-		conn_err = $"arrow_next".connect("pressed", self, "change_page", [1])
-		if conn_err:
-			vm.report_errors("inventory", ["arrow_next.pressed -> change_page +1 error: " + String(conn_err)])
-
-	# Block problems when tooltip follows mouse and open inventory overlaps with exits
-	if ProjectSettings.get_setting("escoria/ui/tooltip_follows_mouse") and self is TextureRect:
-		conn_err = connect("mouse_entered", self, "mouse_entered")
-		if conn_err:
-			vm.report_errors("inventory", ["mouse_entered -> mouse_entered error: " + String(conn_err)])
-
-		conn_err = connect("mouse_exited", self, "mouse_exited")
-		if conn_err:
-			vm.report_errors("inventory", ["mouse_exited -> mouse_exited error: " + String(conn_err)])
-
-
+	sort_items()
+	# warning-ignore:return_value_discarded
+	get_node("arrow_prev").connect("pressed", self, "change_page", [-1])
+	#get_node("arrow_left").set_focus_mode(Control.FOCUS_NONE)
+	# warning-ignore:return_value_discarded
+	get_node("arrow_next").connect("pressed", self, "change_page", [1])
+	#get_node("arrow_right").set_focus_mode(Control.FOCUS_NONE)
 	var items = get_node("items")
 	for i in range(0, items.get_child_count()):
 		var c = items.get_child(i)
@@ -224,19 +151,21 @@ func _ready():
 		c.inventory = true
 		c.use_action_menu = false
 		c.hide()
-
 	items.show()
 	set_focus_mode(Control.FOCUS_NONE)
 	#get_node("mask").set_focus_mode(Control.FOCUS_NONE)
 	set_process_input(true)
 
-	#get_node("log_button").connect("pressed", self, "log_button_pressed")
+	var acts = get_node("actions")
+	actions = []
+	for i in range(acts.get_child_count()):
+		var c = acts.get_child(i)
+		actions.puah_back(c)
+		c.connect("pressed", self, "action_pressed", [c.get_name()])
 
-	if has_node("animation"):
-		conn_err = $"animation".connect("animation_finished", self, "anim_finished")
-		if conn_err:
-			vm.report_errors("inventory", ["animation_finished -> anim_finished error: " + String(conn_err)])
+	#get_node("log_button").connect("pressed", self, "log_button_pressed")
 
 	add_to_group("game")
 
 	call_deferred("sort_items")
+

@@ -1,93 +1,151 @@
-extends Node2D
+extends Node
+export(Script) var animations
 
-#warning-ignore:unused_class_variable
-export var global_id = ""                                  # API property
-#warning-ignore:unused_class_variable
-export(String, FILE, ".esc") var events_path = ""          # API property
-export var active = true setget set_active,get_active
+var vm
+var terrain
+var walk_path
+var walk_context
+var moved
+var last_scale = Vector2(1, 1)
+var last_dir = 0
+var animation
+var state = ""
+var walk_destination
+var path_ofs
+var pose_scale = 1
+var task
+var sprites = []
 
-var event_table = {}
+export var speed = 300
+export var scale_on_map = false
+export var light_on_map = false setget set_light_on_map
 
-# This'll contain a highlight tooltip if `tooltip_pos` is set as a child
-var highlight_tooltip
+func _update_terrain():
+	# abstract method
+	assert(0)
 
-var width = float(ProjectSettings.get("display/window/size/width"))
-var height = float(ProjectSettings.get("display/window/size/height"))
+# warning-ignore:unused_argument
+# warning-ignore:unused_argument
+func set_state(p_state, p_force = false):
+	# abstract method
+	assert(0)
 
-func get_tooltip():
-	pass
-
-func show_highlight():
-	if not self.visible:
-		return
-
-	# This is essentially is_interactive, but triggers and exit don't have separate areas
-	if "area" in self and self.area and not self.area.visible:
-		return
-
-	if not has_node("tooltip_pos"):
-		return
-
-	highlight_tooltip = vm.tooltip.duplicate()
-	assert(highlight_tooltip != vm.tooltip)
-
-	var tt_pos = $tooltip_pos.global_position
-	var tt_text = get_tooltip()
-
-	highlight_tooltip.highlight_only = true
-	highlight_tooltip.follow_mouse = false
-	highlight_tooltip.text = tt_text
-
-	tt_pos = vm.camera.zoom_transform.xform(tt_pos)
-
-	# Bail out if we're hopelessly out-of-view
-	if tt_pos.x < 0 or tt_pos.x > width or tt_pos.y < 0 or tt_pos.y > height:
-		highlight_tooltip.free()
-		highlight_tooltip = null
-		return
-
-	vm.tooltip.get_parent().add_child(highlight_tooltip)
-
-	highlight_tooltip.set_position(tt_pos)
-
-	highlight_tooltip.show()
-
-func hide_highlight():
-	if not highlight_tooltip:
-		return
-
-	assert(highlight_tooltip.visible)
-
-	highlight_tooltip.hide()
-	highlight_tooltip.free()
-	highlight_tooltip = null
-
-func run_event(p_ev):
-	vm.emit_signal("run_event", p_ev)
-
-func activate(p_action, p_param = null):
-	if p_param != null:
-		p_action = p_action + " " + p_param.global_id
-
-	if p_action in event_table:
-		run_event(event_table[p_action])
+func set_light_on_map(p_light):
+	light_on_map = p_light
+	if light_on_map:
+		_update_terrain()
 	else:
-		return false
-	return true
+		modulate(Color(1, 1, 1, 1))
 
-func set_active(p_active):
-	active = p_active
-	if p_active:
-		show()
-	else:
-		hide()
 
-func set_interactive(p_interactive):
-	self.area.visible = p_interactive
+func _get_dir(angle):
+	if animations == null:
+		return -1
+	var deg = int(rad2deg(angle) + 180 + 45) % 360
+	var dir = -1
+	var i = 0
+	for ang in animations.dir_angles:
+		if deg < ang:
+			dir = i
+			break
+		i+=2
+	return dir
 
-func get_active():
-	return active
+func walk_stop(pos):
+	(self as Node).set_position(pos)
+	walk_path = []
+
+	if animation != null && animation.is_playing():
+		animation.stop()
+	set_state(state)
+
+	task = null
+	_update_terrain()
+
+	if walk_context != null:
+		vm.finished(walk_context)
+		walk_context = null
+
+func walk_to(pos, context = null):
+	walk_path = terrain.get_terrain_path((self as Node).get_position(), pos)
+	walk_context = context
+	if walk_path.size() == 0:
+		walk_stop((self as Node).get_position())
+		set_process(false)
+		task = null
+		return
+	moved = true
+	walk_destination = walk_path[walk_path.size()-1]
+	if terrain.is_solid(pos):
+		walk_destination = walk_path[walk_path.size()-1]
+	path_ofs = 0.0
+	task = "walk"
+	set_process(true)
+
+func walk(pos, _speed, context = null):
+	walk_to(pos, context)
+
+func modulate(color):
+	for s in sprites:
+		s.set_modulate(color)
+
+
+func _process(time):
+
+	if task == "walk":
+		var to_walk = speed * last_scale.x * time
+		var pos = (self as Node).get_position()
+		var old_pos = pos
+		if walk_path.size() > 0:
+			while to_walk > 0:
+				var next
+				if walk_path.size() > 1:
+					next = walk_path[path_ofs + 1]
+				else:
+					next = walk_path[path_ofs]
+
+				var dist = pos.distance_to(next)
+
+				if dist > to_walk:
+					var n = (next - pos).normalized()
+					pos = pos + n * to_walk
+					break
+				pos = next
+				to_walk -= dist
+				path_ofs += 1
+				if path_ofs >= walk_path.size() - 1:
+					walk_stop(walk_destination)
+					set_process(false)
+					return
+
+		var angle = old_pos.angle_to_point(pos)
+		(self as Node).set_position(pos)
+
+		last_dir = _get_dir(angle)
+
+		if has_node("animation"):
+			if last_dir != -1 && animation.get_current_animation() != animations.directions[last_dir]:
+				animation.play(animations.directions[last_dir])
+
+		pose_scale = animations.directions[last_dir+1]
+
+		_update_terrain()
+
+func _find_sprites(p = null):
+	if p is Sprite || p is AnimatedSprite || p is TextureRect || p is TextureButton:
+		sprites.push_back(p)
+	for i in range(0, p.get_child_count()):
+		_find_sprites(p.get_child(i))
 
 func _ready():
-	add_to_group("highlight_tooltip")
+	if has_node("../terrain"):
+		terrain = get_node("../terrain")
+
+	_find_sprites(self)
+
+	if Engine.is_editor_hint():
+		return
+	if has_node("animation"):
+		animation = get_node("animation")
+	vm = get_node("/root/vm")
 
